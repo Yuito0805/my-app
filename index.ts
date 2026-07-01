@@ -7,7 +7,9 @@ import { PrismaClient } from "./generated/prisma/index.js";
 
 const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  ssl: true // Renderの外部接続にはこれが必要なことが多いんじゃ
+  ssl: {
+    rejectUnauthorized: false // 証明書の検証をスキップして、接続を通すようにするぞ
+  }
 });
 const adapter = new PrismaPg(pool);
 // @ts-ignore
