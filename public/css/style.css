@@ -1000,7 +1000,7 @@ body {
 @media (max-width: 760px) { .home-main { padding-top:10px; } .hero-v11 { max-width:calc(100% - 16px); margin-bottom:28px; padding:34px 16px; border-radius:24px; } .hero-copy h1 { font-size:clamp(2rem,11vw,3rem); } .hero-search-card { padding:14px; border-radius:18px; } .search-row { grid-template-columns:1fr; } .filter-drawer-toggle { display:block; } .filter-panel { display:none; grid-template-columns:1fr 1fr; } .filter-panel.open { display:grid; } .active-filter-area { flex-wrap:wrap; } .clear-filter-link { margin-left:auto; } .course-onboarding-card { grid-template-columns:auto minmax(0,1fr); } .course-onboarding-card .button-link { grid-column:1/-1; width:100%; text-align:center; } .catalog-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .shelf-card-wrap { flex-basis:248px; } .stat-grid-seven { grid-template-columns:repeat(2,minmax(0,1fr)); } .course-choice-grid { grid-template-columns:1fr; } .skeleton-card-row { grid-template-columns:1fr 1fr; } }
 @media (max-width: 520px) { .hero-trust-row { display:grid; gap:5px; } .filter-panel { grid-template-columns:1fr; } .catalog-grid { grid-template-columns:1fr; } .shelf-card-wrap { flex-basis:82vw; } .shelf-shell::after { width:28px; } .result-actions { width:100%; } .result-actions .button-link { flex:1; text-align:center; } .course-choice-grid { max-height:430px; } }
 
-/* v12: 公開デモ表示とマイページの可読性改善 */
+/* v13: 公開デモ表示とマイページの可読性改善 */
 .demo-disclosure {
   display: flex;
   align-items: center;

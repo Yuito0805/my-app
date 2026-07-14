@@ -67,7 +67,7 @@
           <% if (currentAccount) { %>
             <form class="save-search-panel save-search-v11" action="/saved-searches" method="post">
               <input type="hidden" name="keyword" value="<%= q %>"><input type="hidden" name="searchTarget" value="<%= searchTarget %>"><input type="hidden" name="condition" value="<%= conditionFilter %>"><input type="hidden" name="itemStatus" value="<%= statusFilter %>"><input type="hidden" name="sortOrder" value="<%= sort %>"><input type="hidden" name="returnTo" value="<%= currentUrl %>">
-              <label><span>この条件を保存</span><input type="text" name="name" maxlength="40" placeholder="例：蒼海情報構造演習・募集中" required></label><button class="secondary" type="submit">保存</button>
+              <label><span>この条件を保存</span><input type="text" name="name" maxlength="40" placeholder="例：アルゴリズム理論・募集中" required></label><button class="secondary" type="submit">保存</button>
             </form>
           <% } %>
         </div>

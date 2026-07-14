@@ -36,11 +36,11 @@
             <form action="/accounts" method="post">
               <div class="form-field">
                 <label for="signup-name">名前<span class="required">必須</span></label>
-                <input id="signup-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：デモ利用者D01" autocomplete="name" required>
+                <input id="signup-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：利用者I01" autocomplete="name" required>
               </div>
               <div class="form-field">
                 <label for="signup-email">メールアドレス<span class="required">必須</span></label>
-                <input id="signup-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：webpro-demo-new@keio.jp" autocomplete="email" required>
+                <input id="signup-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：webpro-sample-new@keio.jp" autocomplete="email" required>
                 <p class="form-help">@keio.jp で終わるメールアドレスのみ登録できます。</p>
               </div>
               <button class="primary full-button" type="submit">アカウントを作成する</button>
@@ -57,22 +57,22 @@
                 <p>ボタンを押すと、下のログインフォームへ架空の情報を入力します。</p>
               </div>
               <div class="demo-account-grid">
-                <button class="demo-account-button" type="button" data-demo-login data-demo-name="デモ利用者A02" data-demo-email="webpro-demo-a02@keio.jp">
-                  <strong>出品者として試す</strong><span>デモ利用者A02</span>
+                <button class="demo-account-button" type="button" data-demo-login data-demo-name="利用者A02" data-demo-email="webpro-sample-a02@keio.jp">
+                  <strong>出品者として試す</strong><span>利用者A02</span>
                 </button>
-                <button class="demo-account-button" type="button" data-demo-login data-demo-name="デモ利用者A01" data-demo-email="webpro-demo-a01@keio.jp">
-                  <strong>受取希望者として試す</strong><span>デモ利用者A01</span>
+                <button class="demo-account-button" type="button" data-demo-login data-demo-name="利用者A01" data-demo-email="webpro-sample-a01@keio.jp">
+                  <strong>受取希望者として試す</strong><span>利用者A01</span>
                 </button>
               </div>
             </div>
             <form action="/login" method="post">
               <div class="form-field">
                 <label for="login-name">名前<span class="required">必須</span></label>
-                <input id="login-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：デモ利用者A01" autocomplete="name" required>
+                <input id="login-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：利用者A01" autocomplete="name" required>
               </div>
               <div class="form-field">
                 <label for="login-email">メールアドレス<span class="required">必須</span></label>
-                <input id="login-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：webpro-demo-a01@keio.jp" autocomplete="email" required>
+                <input id="login-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：webpro-sample-a01@keio.jp" autocomplete="email" required>
               </div>
               <button class="primary full-button" type="submit">ログインする</button>
             </form>

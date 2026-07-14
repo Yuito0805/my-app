@@ -9,7 +9,7 @@ function item(id: number, textbookId: number, courseId: number, createdAt = "202
     createdAt,
     _count: { favorites: 0 },
     textbook: {
-      textbookCourses: [{ course: { id: courseId, teacherName: `デモ教員${courseId}` } }],
+      textbookCourses: [{ course: { id: courseId, teacherName: `教員T${courseId}` } }],
     },
   };
 }
