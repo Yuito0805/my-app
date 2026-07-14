@@ -5,7 +5,7 @@
   <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
   <%- include("partials/messages", { notice, error }) %>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <% const courses = item.textbook.textbookCourses.map(tc => tc.course); %>
     <% const receiverCandidateIds = new Set(); %>
     <% const receiverCandidates = []; %>

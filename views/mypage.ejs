@@ -4,14 +4,15 @@
 <body>
   <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
   <%- include("partials/messages", { notice, error }) %>
+  <%- include("partials/onboarding", { showOnboarding, currentAccount, currentPath }) %>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <% const openItems = myItems.filter(item => !item.isCanceled && !item.completedAt && !item.receiver); %>
     <% const negotiatingItems = myItems.filter(item => !item.isCanceled && !item.completedAt && item.receiver); %>
 
-    <div class="page-header">
-      <h1>マイページ</h1>
-      <p><%= currentAccount.accountName %>さんの活動と、履修科目に合わせた教科書探しをまとめて管理できます。</p>
+    <div class="page-header page-header-with-action">
+      <div><h1>マイページ</h1><p><%= currentAccount.accountName %>さんの活動と、履修科目に合わせた教科書探しをまとめて管理できます。</p></div>
+      <form action="/onboarding/reset" method="post"><button class="secondary small-button" type="submit">使い方ガイドを表示</button></form>
     </div>
 
     <% const updateCount = unreadItems.length + notificationSummary.length; %>
@@ -75,19 +76,43 @@
       </div>
     </section>
 
+    <section class="activity-dashboard" aria-labelledby="recent-activity-title">
+      <div class="activity-dashboard-header">
+        <div><span class="section-eyebrow">RECENT ACTIVITY</span><h2 id="recent-activity-title">最近の活動</h2><p>お気に入り・閲覧・出品・チャット・通知を新しい順にまとめています。</p></div>
+        <div class="activity-week-summary" aria-label="過去7日間の活動件数"><strong><%= activitySummary.total %></strong><span>過去7日間</span></div>
+      </div>
+      <div class="activity-layout">
+        <div class="activity-stat-grid" aria-label="活動の内訳">
+          <div><span>お気に入り</span><strong><%= activitySummary.favorites %>件</strong></div>
+          <div><span>閲覧</span><strong><%= activitySummary.views %>件</strong></div>
+          <div><span>チャット</span><strong><%= activitySummary.messages %>件</strong></div>
+          <div><span>通知</span><strong><%= activitySummary.updates %>件</strong></div>
+        </div>
+        <% if (recentActivities.length === 0) { %>
+          <div class="empty-state activity-empty"><strong>最近の活動はまだありません。</strong><p>教科書を検索したり、お気に入りに追加したりすると、ここに表示されます。</p><a class="button-link primary" href="/">教科書を探す</a></div>
+        <% } else { %>
+          <ol class="activity-timeline">
+            <% recentActivities.forEach(activity => { %>
+              <li><a href="<%= activity.href %>"><span class="activity-icon activity-<%= activity.type %>" aria-hidden="true"><%= activity.icon %></span><span class="activity-main"><span class="activity-label"><%= activity.label %></span><strong><%= activity.title %></strong><small><%= activity.description %></small></span><time datetime="<%= activity.occurredAt.toISOString() %>"><%= formatRelativeDate(activity.occurredAt) %></time><span class="activity-arrow" aria-hidden="true">›</span></a></li>
+            <% }) %>
+          </ol>
+        <% } %>
+      </div>
+    </section>
+
     <div class="tabs mypage-tabs">
       <div class="tab-list" role="tablist" aria-label="マイページの表示切り替え">
-        <button class="tab-button active" type="button" role="tab" data-tab-target="updates"><span>新規更新</span><strong><%= updateCount %></strong></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="listings"><span>自分の出品</span><strong><%= myItems.length %></strong></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="chats"><span>問い合わせ中</span><strong><%= myChatThreads.length %></strong></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="favorites"><span>お気に入り</span><strong><%= favoriteItems.length %></strong></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="recent"><span>最近見たもの</span><strong><%= recentViews.length %></strong></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="saved"><span>保存した検索</span><strong><%= savedSearches.length %></strong></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="courses"><span>履修科目</span><strong><%= enrolledCourses.length %></strong></button>
+        <button class="tab-button active" type="button" role="tab" id="tab-updates" aria-controls="panel-updates" data-tab-target="updates" aria-selected="true" tabindex="0"><span>新規更新</span><strong><%= updateCount %></strong></button>
+        <button class="tab-button" type="button" role="tab" id="tab-listings" aria-controls="panel-listings" data-tab-target="listings" aria-selected="false" tabindex="-1"><span>自分の出品</span><strong><%= myItems.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" id="tab-chats" aria-controls="panel-chats" data-tab-target="chats" aria-selected="false" tabindex="-1"><span>問い合わせ中</span><strong><%= myChatThreads.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" id="tab-favorites" aria-controls="panel-favorites" data-tab-target="favorites" aria-selected="false" tabindex="-1"><span>お気に入り</span><strong><%= favoriteItems.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" id="tab-recent" aria-controls="panel-recent" data-tab-target="recent" aria-selected="false" tabindex="-1"><span>最近見たもの</span><strong><%= recentViews.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" id="tab-saved" aria-controls="panel-saved" data-tab-target="saved" aria-selected="false" tabindex="-1"><span>保存した検索</span><strong><%= savedSearches.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" id="tab-courses" aria-controls="panel-courses" data-tab-target="courses" aria-selected="false" tabindex="-1"><span>履修科目</span><strong><%= enrolledCourses.length %></strong></button>
       </div>
     </div>
 
-    <section class="tab-panel active" data-tab-panel="updates" role="tabpanel">
+    <section id="panel-updates" class="tab-panel active" data-tab-panel="updates" role="tabpanel" aria-labelledby="tab-updates">
       <div class="card">
         <div class="section-header">
           <div><h2>新規更新</h2><p>保存検索・お気に入り・チャットに関する未読情報をまとめています。</p></div>
@@ -127,7 +152,7 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-tab-panel="listings" role="tabpanel">
+    <section id="panel-listings" class="tab-panel" data-tab-panel="listings" role="tabpanel" aria-labelledby="tab-listings" hidden>
       <div class="card">
         <div class="section-header">
           <div><h2>自分の出品</h2><p>取り消し済みの出品は、取り消しから<%= canceledItemVisibleHours %>時間後に非表示になります。</p></div>
@@ -156,7 +181,7 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-tab-panel="chats" role="tabpanel">
+    <section id="panel-chats" class="tab-panel" data-tab-panel="chats" role="tabpanel" aria-labelledby="tab-chats" hidden>
       <div class="card">
         <div class="section-header"><div><h2>問い合わせ中の譲渡品</h2><p>自分がチャットを送った譲渡品を、重複せず一覧表示します。</p></div><a class="button-link secondary small-button" href="/">教科書を探す</a></div>
         <% if (myChatThreads.length === 0) { %>
@@ -180,7 +205,7 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-tab-panel="favorites" role="tabpanel">
+    <section id="panel-favorites" class="tab-panel" data-tab-panel="favorites" role="tabpanel" aria-labelledby="tab-favorites" hidden>
       <div class="card">
         <div class="section-header"><div><h2>お気に入り</h2><p>あとで確認したい教科書を保存しています。状態が変わると通知が届きます。</p></div><a class="button-link secondary small-button" href="/">教科書を探す</a></div>
         <% if (favoriteItems.length === 0) { %>
@@ -206,7 +231,7 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-tab-panel="recent" role="tabpanel">
+    <section id="panel-recent" class="tab-panel" data-tab-panel="recent" role="tabpanel" aria-labelledby="tab-recent" hidden>
       <div class="card">
         <div class="section-header"><div><h2>最近見た教科書</h2><p>直近に詳細を開いた教科書を最大8件表示します。</p></div><a class="button-link secondary small-button" href="/">教科書を探す</a></div>
         <% if (recentViews.length === 0) { %>
@@ -233,7 +258,7 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-tab-panel="courses" role="tabpanel">
+    <section id="panel-courses" class="tab-panel" data-tab-panel="courses" role="tabpanel" aria-labelledby="tab-courses" hidden>
       <div class="card course-settings-card">
         <div class="section-header"><div><span class="section-eyebrow">PERSONALIZE</span><h2>履修科目を設定</h2><p>選んだ科目に関連する募集中の教科書を、トップページとおすすめで優先表示します。最大12科目まで選択できます。</p></div><a class="button-link secondary small-button" href="/">トップページで確認</a></div>
         <% if (enrolledCourses.length > 0) { %><div class="selected-course-summary"><% enrolledCourses.forEach(course => { %><span class="selected-course-chip"><%= course.courseName %><small><%= course.teacherName %></small></span><% }) %></div><% } else { %><div class="course-empty-hint"><strong>履修科目はまだ登録されていません。</strong><span>下の候補から選ぶと、教科書探しが個別化されます。</span></div><% } %>
@@ -246,7 +271,7 @@
       </div>
     </section>
 
-    <section class="tab-panel" data-tab-panel="saved" role="tabpanel">
+    <section id="panel-saved" class="tab-panel" data-tab-panel="saved" role="tabpanel" aria-labelledby="tab-saved" hidden>
       <div class="card">
         <div class="section-header"><div><h2>保存した検索</h2><p>よく使う条件を再利用し、前回確認後の新着件数を確認できます。</p></div><a class="button-link secondary small-button" href="/">新しい条件で検索</a></div>
         <% if (savedSearches.length === 0) { %>

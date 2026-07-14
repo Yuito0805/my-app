@@ -1,3 +1,4 @@
+<a class="skip-link" href="#main-content">本文へ移動</a>
 <header class="site-header">
   <div class="header-inner">
     <a class="brand" href="/" aria-label="教科書シェア トップページ">
@@ -10,11 +11,11 @@
       <span>教科書シェア</span>
     </a>
 
-    <button class="nav-toggle" type="button" data-nav-toggle aria-label="メニューを開閉" aria-expanded="false">
+    <button class="nav-toggle" type="button" data-nav-toggle aria-label="メニューを開閉" aria-expanded="false" aria-controls="main-navigation">
       <span aria-hidden="true">☰</span>
     </button>
 
-    <nav class="site-nav-menu" data-nav-menu aria-label="メインナビゲーション">
+    <nav id="main-navigation" class="site-nav-menu" data-nav-menu aria-label="メインナビゲーション">
       <a class="nav-link <%= currentPath === '/' ? 'active' : '' %>" href="/">教科書を探す</a>
       <% if (currentAccount) { %>
         <a class="nav-link <%= currentPath === '/items/new' ? 'active' : '' %>" href="/items/new">出品する</a>

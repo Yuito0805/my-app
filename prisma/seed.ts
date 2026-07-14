@@ -53,8 +53,8 @@ async function stage<T>(name: string, task: () => Promise<T>) {
   return result;
 }
 
-const itemSeedKey = (number: number) => `sample-v13-item-${String(number).padStart(3, "0")}`;
-const chatSeedKey = (number: number) => `sample-v13-chat-${String(number).padStart(3, "0")}`;
+const itemSeedKey = (number: number) => `sample-v14-item-${String(number).padStart(3, "0")}`;
+const chatSeedKey = (number: number) => `sample-v14-chat-${String(number).padStart(3, "0")}`;
 
 type ItemSeed = {
   number: number;
@@ -342,7 +342,7 @@ async function main() {
       savedSearchId: type === "saved_search" ? savedSearch.id : null,
       message,
       isRead: index % 4 === 0,
-      dedupeKey: `sample-v13-notification-${String(index + 1).padStart(2, "0")}`,
+      dedupeKey: `sample-v14-notification-${String(index + 1).padStart(2, "0")}`,
       createdAt: hoursAgo((index + 1) * 3),
     };
   });

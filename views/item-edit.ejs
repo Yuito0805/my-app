@@ -5,7 +5,7 @@
   <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
   <%- include("partials/messages", { notice, error }) %>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <% const courseNames = item.textbook.textbookCourses.map(tc => `${tc.course.courseName}（${tc.course.teacherName}）`).join("、") || "未登録"; %>
 
     <div class="page-header">

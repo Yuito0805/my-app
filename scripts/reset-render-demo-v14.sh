@@ -18,7 +18,7 @@ if (["127.0.0.1", "localhost"].includes(url.hostname)) {
 }
 NODE
 
-echo "上記DBの既存データをすべて削除し、v13の架空データへ置換します。"
+echo "上記DBの既存データをすべて削除し、v14の架空データへ置換します。"
 read -r -p "続行する場合は RESET と入力してください: " answer
 [[ "$answer" == "RESET" ]] || { echo "中止しました。"; unset DATABASE_URL RENDER_DB_URL; exit 1; }
 

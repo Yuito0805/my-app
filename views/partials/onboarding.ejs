@@ -1,0 +1,39 @@
+<% if (showOnboarding && currentAccount) { %>
+  <section class="onboarding-panel" aria-labelledby="onboarding-title" data-onboarding>
+    <div class="onboarding-header">
+      <div>
+        <span class="section-eyebrow">GETTING STARTED</span>
+        <h2 id="onboarding-title">教科書シェアへようこそ</h2>
+        <p>最初にこの3つを試すと、主要機能を短時間で確認できます。</p>
+      </div>
+      <form action="/onboarding/dismiss" method="post">
+        <input type="hidden" name="returnTo" value="<%= currentPath %>">
+        <button class="icon-button onboarding-close" type="submit" aria-label="使い方ガイドを閉じて次回から表示しない">×</button>
+      </form>
+    </div>
+
+    <ol class="onboarding-steps">
+      <li>
+        <span class="onboarding-step-number">1</span>
+        <div><strong>履修科目を登録</strong><p>関連する教科書をトップページで優先表示します。</p></div>
+        <a class="button-link secondary small-button" href="/mypage?tab=courses">設定する</a>
+      </li>
+      <li>
+        <span class="onboarding-step-number">2</span>
+        <div><strong>教科書を検索</strong><p>教科書名・著者名・教科名・担当教員名から探せます。</p></div>
+        <a class="button-link secondary small-button" href="/#catalog">探してみる</a>
+      </li>
+      <li>
+        <span class="onboarding-step-number">3</span>
+        <div><strong>出品または問い合わせ</strong><p>使い終わった本を出品し、チャットの流れを確認できます。</p></div>
+        <a class="button-link primary small-button" href="/items/new">出品する</a>
+      </li>
+    </ol>
+
+    <form class="onboarding-footer" action="/onboarding/dismiss" method="post">
+      <input type="hidden" name="returnTo" value="<%= currentPath %>">
+      <span>この案内はマイページからいつでも再表示できます。</span>
+      <button class="text-button" type="submit">確認したので閉じる</button>
+    </form>
+  </section>
+<% } %>

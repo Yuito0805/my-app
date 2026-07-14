@@ -2,11 +2,17 @@
   const navToggle = document.querySelector("[data-nav-toggle]");
   const navMenu = document.querySelector("[data-nav-menu]");
 
+  const closeNavigation = () => {
+    navMenu?.classList.remove("open");
+    navToggle?.setAttribute("aria-expanded", "false");
+  };
+
   if (navToggle && navMenu) {
     navToggle.addEventListener("click", () => {
       const isOpen = navMenu.classList.toggle("open");
       navToggle.setAttribute("aria-expanded", String(isOpen));
     });
+    navMenu.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeNavigation));
   }
 
   document.querySelectorAll("[data-toast]").forEach((toast) => {
@@ -14,10 +20,10 @@
     const dismiss = () => {
       toast.style.opacity = "0";
       toast.style.transform = "translateY(-8px)";
-      setTimeout(() => toast.remove(), 180);
+      window.setTimeout(() => toast.remove(), 180);
     };
     closeButton?.addEventListener("click", dismiss);
-    setTimeout(dismiss, 5200);
+    window.setTimeout(dismiss, 5200);
   });
 
   const modalBackdrop = document.querySelector("[data-confirm-modal]");
@@ -26,11 +32,16 @@
   const modalConfirm = modalBackdrop?.querySelector("[data-modal-confirm]");
   const modalCancel = modalBackdrop?.querySelector("[data-modal-cancel]");
   let pendingForm = null;
+  let modalTrigger = null;
+
+  const focusableSelector = "button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
   const closeModal = () => {
     modalBackdrop?.classList.remove("open");
     document.body.style.overflow = "";
     pendingForm = null;
+    if (modalTrigger instanceof HTMLElement) modalTrigger.focus();
+    modalTrigger = null;
   };
 
   document.querySelectorAll("form[data-confirm]").forEach((form) => {
@@ -38,11 +49,14 @@
       if (!modalBackdrop || form.dataset.confirmed === "true") return;
       event.preventDefault();
       pendingForm = form;
+      modalTrigger = event.submitter instanceof HTMLElement ? event.submitter : document.activeElement;
       if (modalTitle) modalTitle.textContent = form.dataset.confirmTitle || "この操作を実行しますか？";
       if (modalMessage) modalMessage.textContent = form.dataset.confirmMessage || "実行後は元に戻せない場合があります。";
       if (modalConfirm) {
         modalConfirm.textContent = form.dataset.confirmLabel || "実行する";
-        modalConfirm.className = form.dataset.confirmVariant === "danger" ? "danger" : form.dataset.confirmVariant === "success" ? "success" : "primary";
+        modalConfirm.className = form.dataset.confirmVariant === "danger"
+          ? "danger"
+          : form.dataset.confirmVariant === "success" ? "success" : "primary";
       }
       modalBackdrop.classList.add("open");
       document.body.style.overflow = "hidden";
@@ -61,20 +75,44 @@
   modalBackdrop?.addEventListener("click", (event) => {
     if (event.target === modalBackdrop) closeModal();
   });
+
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && modalBackdrop?.classList.contains("open")) closeModal();
+    if (event.key === "Escape") {
+      if (modalBackdrop?.classList.contains("open")) closeModal();
+      closeNavigation();
+    }
+
+    if (event.key === "Tab" && modalBackdrop?.classList.contains("open")) {
+      const focusable = [...modalBackdrop.querySelectorAll(focusableSelector)].filter((element) => element instanceof HTMLElement);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   });
 
   const tabButtons = [...document.querySelectorAll("[data-tab-target]")];
   const tabPanels = [...document.querySelectorAll("[data-tab-panel]")];
 
-  const activateTab = (target) => {
+  const activateTab = (target, focus = false) => {
     tabButtons.forEach((button) => {
       const active = button.dataset.tabTarget === target;
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
+      button.setAttribute("tabindex", active ? "0" : "-1");
+      if (active && focus) button.focus();
     });
-    tabPanels.forEach((panel) => panel.classList.toggle("active", panel.dataset.tabPanel === target));
+    tabPanels.forEach((panel) => {
+      const active = panel.dataset.tabPanel === target;
+      panel.classList.toggle("active", active);
+      panel.hidden = !active;
+    });
   };
 
   if (tabButtons.length > 0) {
@@ -95,8 +133,19 @@
         history.replaceState(null, "", url);
       });
     });
-  }
 
+    const tabList = document.querySelector('[role="tablist"]');
+    tabList?.addEventListener("keydown", (event) => {
+      const index = tabButtons.indexOf(document.activeElement);
+      if (index < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? tabButtons.length - 1
+        : event.key === "ArrowRight" ? (index + 1) % tabButtons.length
+        : (index - 1 + tabButtons.length) % tabButtons.length;
+      activateTab(tabButtons[nextIndex].dataset.tabTarget, true);
+    });
+  }
 
   document.querySelectorAll("[data-demo-login]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -113,21 +162,4 @@
 
   const chatMessages = document.querySelector("[data-chat-messages]");
   if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
-})();
-
-(() => {
-  const tabList = document.querySelector('[role="tablist"]');
-  if (!tabList) return;
-  const tabs = [...tabList.querySelectorAll('[role="tab"]')];
-  tabList.addEventListener("keydown", (event) => {
-    const index = tabs.indexOf(document.activeElement);
-    if (index < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    event.preventDefault();
-    const nextIndex = event.key === "Home" ? 0
-      : event.key === "End" ? tabs.length - 1
-      : event.key === "ArrowRight" ? (index + 1) % tabs.length
-      : (index - 1 + tabs.length) % tabs.length;
-    tabs[nextIndex]?.focus();
-    tabs[nextIndex]?.click();
-  });
 })();

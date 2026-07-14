@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "エラーが発生しました" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <main id="main-content" tabindex="-1">
+    <section class="error-state-card" aria-labelledby="server-error-title">
+      <span class="error-code">500</span>
+      <div class="error-state-icon" aria-hidden="true">!</div>
+      <h1 id="server-error-title">処理中にエラーが発生しました</h1>
+      <p>一時的にデータを読み込めなかった可能性があります。時間をおいて、もう一度お試しください。</p>
+      <p class="meta">参照コード：<%= errorReference %></p>
+      <div class="button-row error-state-actions">
+        <a class="button-link primary" href="/">トップページへ戻る</a>
+        <button class="secondary" type="button" onclick="location.reload()">再読み込み</button>
+      </div>
+    </section>
+  </main>
+  <%- include("partials/footer") %>
+</body>
+</html>

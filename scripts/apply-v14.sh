@@ -2,13 +2,13 @@
 set -euo pipefail
 
 cd "$HOME/webpro"
-ZIP_PATH="/mnt/c/Users/nakae/Downloads/my-app-updated-v13.zip"
+ZIP_PATH="/mnt/c/Users/nakae/Downloads/my-app-updated-v14.zip"
 PROJECT_DIR="$HOME/webpro/my-app"
-EXTRACT_DIR="/tmp/my-app-updated-v13"
+EXTRACT_DIR="/tmp/my-app-updated-v14"
 BACKUP_DIR="$HOME/webpro/my-app_backup_$(date +%Y%m%d_%H%M%S)"
 
-test -f "$ZIP_PATH" || { echo "zipが見つかりません: $ZIP_PATH"; exit 1; }
-test -d "$PROJECT_DIR" || { echo "本体プロジェクトが見つかりません: $PROJECT_DIR"; exit 1; }
+test -f "$ZIP_PATH" || { echo "ZIPが見つかりません: $ZIP_PATH"; exit 1; }
+test -d "$PROJECT_DIR" || { echo "プロジェクトが見つかりません: $PROJECT_DIR"; exit 1; }
 
 cp -a "$PROJECT_DIR" "$BACKUP_DIR"
 rm -rf "$EXTRACT_DIR"
@@ -25,6 +25,6 @@ for directory in prisma views public src tests scripts; do
   cp -a "$SOURCE_DIR/$directory" "$PROJECT_DIR/$directory"
 done
 
-echo "v13への置き換えが完了しました。"
+echo "v14への置き換えが完了しました。"
 echo "バックアップ: $BACKUP_DIR"
 echo ".env は変更していません。"

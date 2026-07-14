@@ -4,14 +4,15 @@
 <body>
   <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
   <%- include("partials/messages", { notice, error }) %>
+  <%- include("partials/onboarding", { showOnboarding, currentAccount, currentPath }) %>
 
-  <main class="home-main">
+  <main id="main-content" tabindex="-1" class="home-main">
     <section class="hero hero-v11">
       <div class="hero-orb hero-orb-one" aria-hidden="true"></div>
       <div class="hero-orb hero-orb-two" aria-hidden="true"></div>
       <div class="hero-content hero-content-wide">
         <div class="hero-copy">
-          <span class="hero-eyebrow">KEIO TEXTBOOK CIRCULATION</span>
+          <span class="hero-eyebrow">CAMPUS TEXTBOOK CIRCULATION</span>
           <h1>次の授業に必要な一冊を、<br><span>学生同士で見つけよう。</span></h1>
           <p>履修科目と利用履歴から、必要になりそうな教科書を優先して表示します。金銭の仲介は行いません。</p>
           <div class="hero-trust-row"><span>✓ 教科名から検索</span><span>✓ おすすめを個別化</span><span>✓ チャットで相談</span></div>
@@ -96,7 +97,7 @@
       </section>
     <% } %>
 
-    <section class="catalog-section">
+    <section id="catalog" class="catalog-section">
       <div class="result-bar result-bar-v11"><div><span class="section-eyebrow">CATALOG</span><h2><%= q ? `「${q}」の検索結果` : '募集中の教科書' %></h2><div class="result-meta"><strong><%= totalItems %>件</strong>見つかりました</div></div><div class="result-actions"><% if (hasActiveFilters) { %><a class="button-link secondary small-button" href="/">条件をリセット</a><% } %><% if (currentAccount) { %><a class="button-link primary small-button" href="/items/new">＋ 出品する</a><% } %></div></div>
       <% if (items.length === 0) { %>
         <div class="empty-state empty-state-v11"><div class="empty-illustration">⌕</div><strong>条件に合う譲渡品が見つかりませんでした</strong><p>キーワードを短くする、状態条件を外す、交渉中も含めるなどを試してください。</p><div class="button-row"><a class="button-link secondary" href="<%= filterChipUrls.condition %>">状態指定を外す</a><a class="button-link secondary" href="/?status=all&q=<%= encodeURIComponent(q) %>">全状態を見る</a><% if (currentAccount) { %><a class="button-link primary" href="/items/new">この教科書を出品する</a><% } %></div></div>

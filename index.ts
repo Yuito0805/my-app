@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Pool } from "pg";
@@ -15,6 +15,9 @@ import {
   sortItems,
 } from "./src/services/search-service.ts";
 import { rerankRecommendations, scoreRecommendationCandidates } from "./src/services/recommendation-service.ts";
+import { buildRecentActivities, summarizeRecentActivities } from "./src/services/activity-service.ts";
+import { formatDate, formatRelativeDate } from "./src/utils/date-format.ts";
+import { getSafeReturnTo, isAllowedSchoolEmail, normalizeEmail } from "./src/utils/validation.ts";
 import {
   notifyChatParticipants,
   notifyFavoriteStateChange,
@@ -67,11 +70,6 @@ function redirectWithQuery(res: Response, targetPath: string, params: Record<str
   res.redirect(query ? `${targetPath}${separator}${query}` : targetPath);
 }
 
-function getSafeReturnTo(value: unknown, fallback: string) {
-  const returnTo = String(value || "").trim();
-  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return fallback;
-  return returnTo.split("#")[0];
-}
 
 function redirectBackWithMessage(
   res: Response,
@@ -95,40 +93,7 @@ function getMessageParams(req: Request) {
   };
 }
 
-function formatDate(value: Date | string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  return date.toLocaleString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
-function formatRelativeDate(value: Date | string | null) {
-  if (!value) return "";
-  const diffMs = Date.now() - new Date(value).getTime();
-  const minutes = Math.max(0, Math.floor(diffMs / 60000));
-  if (minutes < 1) return "たった今";
-  if (minutes < 60) return `${minutes}分前`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}時間前`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}日前`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}か月前`;
-  return `${Math.floor(months / 12)}年前`;
-}
-
-function normalizeEmail(value: string) {
-  return value.trim().toLowerCase();
-}
-
-function isKeioEmail(email: string) {
-  return normalizeEmail(email).endsWith("@keio.jp");
-}
 
 function getCourseInputs(body: any) {
   return [1, 2, 3]
@@ -194,6 +159,7 @@ async function baseRenderData(req: Request, currentAccount: any) {
     currentPath: req.path,
     currentUrl: req.originalUrl,
     unreadCount: currentAccount ? await getHeaderNotificationCount(currentAccount.id) : 0,
+    showOnboarding: Boolean(currentAccount) && (req.query.guide === "1" || getCookie(req, "onboardingComplete") !== "1"),
     ...getMessageParams(req),
     formatDate,
     formatRelativeDate,
@@ -421,7 +387,7 @@ app.get("/", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send("データベースの読み込みに失敗しました。");
+    res.status(500).render("server-error", { ...await baseRenderData(req, await getCurrentAccount(req)), errorReference: "HOME_LOAD" });
   }
 });
 
@@ -532,12 +498,30 @@ app.get("/mypage", async (req: Request, res: Response) => {
     ]);
     const enrolledCourseIds = enrolledCourseRows.map((row: any) => row.courseId);
 
-    const notificationSummary = await prisma.notification.findMany({
-      where: { accountId: currentAccount.id, isRead: false },
-      include: { item: { include: { textbook: true } }, savedSearch: true },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    });
+    const [notificationSummary, recentNotifications] = await Promise.all([
+      prisma.notification.findMany({
+        where: { accountId: currentAccount.id, isRead: false },
+        include: { item: { include: { textbook: true } }, savedSearch: true },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
+      prisma.notification.findMany({
+        where: { accountId: currentAccount.id },
+        include: { item: { include: { textbook: true } }, savedSearch: true },
+        orderBy: { createdAt: "desc" },
+        take: 16,
+      }),
+    ]);
+
+    const allRecentActivities = buildRecentActivities({
+      favorites: favoriteRows,
+      views: recentViews,
+      notifications: recentNotifications,
+      items: myItems,
+      chatMessages: myChatMessages.slice(0, 16),
+    }, 120);
+    const recentActivities = allRecentActivities.slice(0, 14);
+    const activitySummary = summarizeRecentActivities(allRecentActivities, 7);
 
     res.render("mypage", {
       ...await baseRenderData(req, currentAccount),
@@ -550,6 +534,8 @@ app.get("/mypage", async (req: Request, res: Response) => {
       recentViews,
       savedSearches: savedSearchesWithCounts,
       notificationSummary,
+      recentActivities,
+      activitySummary,
       allCourses,
       enrolledCourses: enrolledCourseRows.map((row: any) => row.course),
       enrolledCourseIds,
@@ -557,7 +543,7 @@ app.get("/mypage", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send("マイページの読み込みに失敗しました。");
+    res.status(500).render("server-error", { ...await baseRenderData(req, await getCurrentAccount(req)), errorReference: "MYPAGE_LOAD" });
   }
 });
 
@@ -694,7 +680,7 @@ app.get("/items/:itemId", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send("譲渡品詳細の読み込みに失敗しました。");
+    res.status(500).render("server-error", { ...await baseRenderData(req, await getCurrentAccount(req)), errorReference: "ITEM_DETAIL_LOAD" });
   }
 });
 
@@ -728,7 +714,7 @@ app.get("/items/:itemId/edit", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send("出品編集画面の読み込みに失敗しました。");
+    res.status(500).render("server-error", { ...await baseRenderData(req, await getCurrentAccount(req)), errorReference: "ITEM_EDIT_LOAD" });
   }
 });
 
@@ -788,6 +774,25 @@ app.get("/api/textbooks", async (req: Request, res: Response) => {
   })));
 });
 
+app.post("/onboarding/dismiss", async (req: Request, res: Response) => {
+  const currentAccount = await getCurrentAccount(req);
+  if (!currentAccount) return res.redirect("/login");
+
+  res.cookie("onboardingComplete", "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24 * 365,
+  });
+  return res.redirect(getSafeReturnTo(req.body.returnTo, "/"));
+});
+
+app.post("/onboarding/reset", async (req: Request, res: Response) => {
+  const currentAccount = await getCurrentAccount(req);
+  if (!currentAccount) return res.redirect("/login");
+  res.clearCookie("onboardingComplete");
+  return redirectWithQuery(res, "/mypage", { guide: "1", notice: "使い方ガイドを再表示しました。" });
+});
+
 app.post("/login", async (req: Request, res: Response) => {
   const accountName = String(req.body.accountName || "").trim();
   const email = normalizeEmail(String(req.body.email || ""));
@@ -819,7 +824,7 @@ app.post("/accounts", async (req: Request, res: Response) => {
   if (!accountName || !email) {
     return redirectWithQuery(res, "/login", { mode: "signup", error: "名前とメールアドレスを入力してください。" });
   }
-  if (!isKeioEmail(email)) {
+  if (!isAllowedSchoolEmail(email)) {
     return redirectWithQuery(res, "/login", {
       mode: "signup",
       name: accountName,
@@ -1224,6 +1229,16 @@ app.use(async (req: Request, res: Response) => {
   res.status(404).render("not-found", {
     ...await baseRenderData(req, currentAccount),
     requestedPath: req.path,
+  });
+});
+
+app.use(async (error: unknown, req: Request, res: Response, _next: NextFunction) => {
+  console.error("[unhandled-error]", error);
+  if (res.headersSent) return;
+  const currentAccount = await getCurrentAccount(req).catch(() => null);
+  res.status(500).render("server-error", {
+    ...await baseRenderData(req, currentAccount),
+    errorReference: "UNEXPECTED_ERROR",
   });
 });
 
