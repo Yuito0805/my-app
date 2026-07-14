@@ -1,0 +1,18 @@
+{
+  "name": "教科書シェア",
+  "short_name": "教科書シェア",
+  "description": "履修科目や検索履歴から必要な教科書を探せる、大学生向け教科書譲渡アプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#15263d",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/images/book-placeholder.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

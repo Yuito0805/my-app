@@ -1,0 +1,16 @@
+<header>
+  <h1>教科書譲渡アプリ</h1>
+  <p>不要になった教科書を登録し、教科書名・教科名から検索して、チャットで受け渡しを相談できます。</p>
+</header>
+<nav>
+  <a href="/">譲渡品を探す</a>
+  <% if (currentAccount) { %>
+    <a href="/items/new">教科書を出品</a>
+    <a href="/mypage">マイページ</a>
+    <form action="/logout" method="post" onsubmit="return confirm('ログアウトしますか？');">
+      <button type="submit">ログアウト</button>
+    </form>
+  <% } else { %>
+    <a href="/login">ログイン</a>
+  <% } %>
+</nav>

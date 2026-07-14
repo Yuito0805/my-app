@@ -4,7 +4,14 @@
   "type": "module",
   "scripts": {
     "start": "tsx index.ts",
-    "db:dev": "prisma dev"
+    "db:dev": "prisma dev",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:push:accept": "prisma db push --accept-data-loss",
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "tsx --test tests/*.test.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

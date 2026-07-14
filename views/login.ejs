@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "ログイン・新規登録" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+
+  <main>
+    <% if (currentAccount) { %>
+      <section class="card" style="max-width:720px; margin:40px auto; text-align:center;">
+        <div class="avatar" style="width:58px;height:58px;margin:0 auto 14px;font-size:1.2rem;"><%= currentAccount.accountName.slice(0, 1) %></div>
+        <h1>ログイン済みです</h1>
+        <p><strong><%= currentAccount.accountName %></strong>（<%= currentAccount.email %>）として利用しています。</p>
+        <div class="button-row" style="justify-content:center;">
+          <a class="button-link primary" href="/">教科書を探す</a>
+          <a class="button-link secondary" href="/mypage">マイページへ</a>
+        </div>
+      </section>
+    <% } else { %>
+      <div class="auth-shell">
+        <section class="auth-side">
+          <span class="hero-eyebrow">慶應生向け教科書譲渡サービス</span>
+          <h1>使い終わった教科書を、次に必要な学生へ。</h1>
+          <p>教科書名・教科名で探し、チャットで受け渡しを相談できます。金銭の仲介は行いません。</p>
+          <div class="auth-benefits">
+            <div class="auth-benefit"><span class="auth-benefit-icon">⌕</span><div><strong>授業から検索</strong><br><span class="small">教科書名だけでなく教科名でも探せます。</span></div></div>
+            <div class="auth-benefit"><span class="auth-benefit-icon">◫</span><div><strong>かんたん出品</strong><br><span class="small">登録済み教科書なら情報を自動入力します。</span></div></div>
+            <div class="auth-benefit"><span class="auth-benefit-icon">✉</span><div><strong>チャットで相談</strong><br><span class="small">受け渡し場所や日時を出品者と相談できます。</span></div></div>
+          </div>
+        </section>
+
+        <section class="auth-content">
+          <% if (mode === 'signup') { %>
+            <h2>新規アカウント作成</h2>
+            <p class="meta">慶應のメールアドレス（@keio.jp）を使って登録してください。</p>
+            <form action="/accounts" method="post">
+              <div class="form-field">
+                <label for="signup-name">名前<span class="required">必須</span></label>
+                <input id="signup-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：山田太郎" autocomplete="name" required>
+              </div>
+              <div class="form-field">
+                <label for="signup-email">メールアドレス<span class="required">必須</span></label>
+                <input id="signup-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：student@keio.jp" autocomplete="email" required>
+                <p class="form-help">@keio.jp で終わるメールアドレスのみ登録できます。</p>
+              </div>
+              <button class="primary full-button" type="submit">アカウントを作成する</button>
+            </form>
+            <div class="auth-divider">すでにアカウントを持っている方</div>
+            <a class="button-link secondary full-button" href="/login">ログインに戻る</a>
+          <% } else { %>
+            <h2>ログイン</h2>
+            <p class="meta">登録時の名前とメールアドレスを入力してください。</p>
+            <form action="/login" method="post">
+              <div class="form-field">
+                <label for="login-name">名前<span class="required">必須</span></label>
+                <input id="login-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：山田太郎" autocomplete="name" required>
+              </div>
+              <div class="form-field">
+                <label for="login-email">メールアドレス<span class="required">必須</span></label>
+                <input id="login-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：student@keio.jp" autocomplete="email" required>
+              </div>
+              <button class="primary full-button" type="submit">ログインする</button>
+            </form>
+            <div class="auth-divider">はじめて利用する方</div>
+            <a class="button-link secondary full-button" href="/login?mode=signup">新規アカウントを作成</a>
+          <% } %>
+        </section>
+      </div>
+    <% } %>
+  </main>
+
+  <%- include("partials/footer") %>
+</body>
+</html>

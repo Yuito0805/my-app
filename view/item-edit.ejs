@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "出品内容を編集" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount }) %>
+
+  <main>
+    <%- include("partials/messages", { notice, error }) %>
+
+    <% const courseNames = item.textbook.textbookCourses.map(tc => `${tc.course.courseName}（${tc.course.teacherName}）`).join("、") || "未登録"; %>
+
+    <section class="card">
+      <h2>出品内容を編集</h2>
+      <p class="meta">
+        教科書名・著者名・関連教科は、教科書データとして共有されるため、この画面では編集しません。<br>
+        今回は、出品ごとの「状態」と「補足説明」だけを変更できます。
+      </p>
+
+      <div class="item-card">
+        <h3><%= item.textbook.title %></h3>
+        <p class="meta">
+          著者：<%= item.textbook.author %><br>
+          関連教科：<%= courseNames %><br>
+          現在の状態：<%= item.condition %>
+          <% if (item.conditionNote) { %>
+            <br>現在の補足：<%= item.conditionNote %>
+          <% } %>
+        </p>
+      </div>
+
+      <form action="/items/<%= item.id %>/edit" method="post" onsubmit="return confirm('この内容で出品情報を更新しますか？');">
+        <label for="condition">教科書の状態</label>
+        <select id="condition" name="condition" required>
+          <% conditionOptions.forEach(option => { %>
+            <option value="<%= option %>" <%= item.condition === option ? "selected" : "" %>><%= option %></option>
+          <% }) %>
+        </select>
+
+        <label for="conditionNote">状態の補足説明</label>
+        <textarea id="conditionNote" name="conditionNote" placeholder="例：第3章にだけマーカーがあります。"><%= item.conditionNote || "" %></textarea>
+
+        <button type="submit">更新する</button>
+        <a class="button-link secondary" href="/items/<%= item.id %>">詳細へ戻る</a>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

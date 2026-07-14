@@ -1,0 +1,18 @@
+<% if (notice || error) { %>
+  <div class="toast-container" aria-live="polite" aria-atomic="true">
+    <% if (notice) { %>
+      <div class="toast notice" data-toast role="status">
+        <span class="toast-icon" aria-hidden="true">✓</span>
+        <div class="toast-body"><p><%= notice %></p></div>
+        <button class="toast-close" type="button" data-toast-close aria-label="通知を閉じる">×</button>
+      </div>
+    <% } %>
+    <% if (error) { %>
+      <div class="toast error" data-toast role="alert">
+        <span class="toast-icon" aria-hidden="true">!</span>
+        <div class="toast-body"><p><%= error %></p></div>
+        <button class="toast-close" type="button" data-toast-close aria-label="エラーを閉じる">×</button>
+      </div>
+    <% } %>
+  </div>
+<% } %>

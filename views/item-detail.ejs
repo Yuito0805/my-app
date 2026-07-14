@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: item.textbook.title }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+
+  <main>
+    <% const courses = item.textbook.textbookCourses.map(tc => tc.course); %>
+    <% const receiverCandidateIds = new Set(); %>
+    <% const receiverCandidates = []; %>
+    <% item.chatMessages.forEach(chat => { %>
+      <% if (chat.senderAccountId !== item.sellerAccountId && !receiverCandidateIds.has(chat.senderAccountId)) { %>
+        <% receiverCandidateIds.add(chat.senderAccountId); %>
+        <% receiverCandidates.push(chat.sender); %>
+      <% } %>
+    <% }) %>
+
+    <div class="page-header">
+      <a class="meta" href="/">← 譲渡品一覧へ戻る</a>
+    </div>
+
+    <div class="detail-grid">
+      <section>
+        <div class="card">
+          <div class="detail-book-cover" aria-hidden="true">
+            <img src="/images/book-placeholder.svg" alt="">
+          </div>
+          <div class="button-row" style="justify-content:center; margin-bottom:12px;">
+            <span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span>
+            <% if (item.receiver) { %><span class="status negotiating-status">交渉相手：<%= item.receiver.accountName %></span><% } %>
+            <span class="favorite-count detail-favorite-count">♥ <%= item._count?.favorites || 0 %>人がお気に入り</span>
+          </div>
+          <h1 class="detail-title"><%= item.textbook.title %></h1>
+          <p class="meta"><%= item.textbook.author %></p>
+
+          <div class="tag-list">
+            <% courses.forEach(course => { %>
+              <span class="tag"><%= course.courseName %> / <%= course.teacherName %></span>
+            <% }) %>
+          </div>
+
+          <dl class="info-list">
+            <div class="info-row"><dt>出品者</dt><dd><%= item.seller.accountName %></dd></div>
+            <div class="info-row"><dt>教科書の状態</dt><dd><%= item.condition %></dd></div>
+            <div class="info-row"><dt>状態の補足</dt><dd><%= item.conditionNote || '補足なし' %></dd></div>
+            <div class="info-row"><dt>登録日時</dt><dd><%= formatDate(item.createdAt) %></dd></div>
+            <% if (item.completedAt) { %><div class="info-row"><dt>譲渡完了日時</dt><dd><%= formatDate(item.completedAt) %></dd></div><% } %>
+            <% if (item.isCanceled && item.canceledAt) { %><div class="info-row"><dt>取り消し日時</dt><dd><%= formatDate(item.canceledAt) %></dd></div><% } %>
+          </dl>
+
+          <div class="detail-actions">
+            <a class="button-link secondary" href="/">一覧へ戻る</a>
+            <% if (currentAccount) { %><a class="button-link secondary" href="/mypage">マイページ</a><% } %>
+            <% if (currentAccount && currentAccount.id !== item.sellerAccountId && !item.isCanceled) { %>
+              <form action="/items/<%= item.id %>/favorite" method="post">
+                <input type="hidden" name="returnTo" value="<%= currentUrl %>">
+                <button class="favorite-detail-button <%= isFavorite ? 'active' : '' %>" type="submit">
+                  <span aria-hidden="true"><%= isFavorite ? '♥' : '♡' %></span>
+                  <%= isFavorite ? 'お気に入り済み' : 'お気に入りに追加' %>
+                </button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+
+        <% if (currentAccount && item.sellerAccountId === currentAccount.id && !item.isCanceled && !item.completedAt) { %>
+          <div class="card">
+            <div class="section-header"><div><h2>出品者用メニュー</h2><p>出品内容と交渉状況を管理できます。</p></div></div>
+            <a class="button-link secondary full-button" href="/items/<%= item.id %>/edit">状態・補足を編集する</a>
+
+            <div class="form-section">
+              <h3>交渉相手を選択・変更</h3>
+              <p class="meta">このチャットに参加した利用者の中から選択できます。あとから変更したり、未定に戻したりできます。</p>
+              <% if (receiverCandidates.length === 0) { %>
+                <div class="empty-state"><strong>交渉相手候補はまだいません。</strong><p>他の利用者からメッセージが届くと選べるようになります。</p></div>
+              <% } else { %>
+                <form action="/items/<%= item.id %>/receiver" method="post"
+                  data-confirm
+                  data-confirm-title="交渉相手を更新しますか？"
+                  data-confirm-message="選択した利用者をこの出品の交渉相手として登録します。"
+                  data-confirm-label="更新する">
+                  <div class="form-field">
+                    <label for="receiverAccountId">交渉相手</label>
+                    <select id="receiverAccountId" name="receiverAccountId">
+                      <option value="">未定に戻す</option>
+                      <% receiverCandidates.forEach(candidate => { %>
+                        <option value="<%= candidate.id %>" <%= item.receiver && item.receiver.id === candidate.id ? 'selected' : '' %>><%= candidate.accountName %>（<%= candidate.email %>）</option>
+                      <% }) %>
+                    </select>
+                  </div>
+                  <button class="primary full-button" type="submit">交渉相手を更新</button>
+                </form>
+              <% } %>
+            </div>
+
+            <div class="form-section">
+              <h3>譲渡の終了</h3>
+              <p class="meta">受け渡しが終わったら譲渡完了にします。出品をやめる場合は取り消してください。</p>
+              <div class="button-row">
+                <% if (item.receiver) { %>
+                  <form action="/items/<%= item.id %>/complete" method="post"
+                    data-confirm
+                    data-confirm-title="譲渡完了にしますか？"
+                    data-confirm-message="受け渡しが完了した出品として記録し、以後のチャットと編集を終了します。"
+                    data-confirm-label="譲渡完了にする"
+                    data-confirm-variant="success">
+                    <button class="success" type="submit">譲渡完了にする</button>
+                  </form>
+                <% } else { %>
+                  <button class="success" type="button" disabled>交渉相手を選ぶと完了できます</button>
+                <% } %>
+                <form action="/items/<%= item.id %>/cancel" method="post"
+                  data-confirm
+                  data-confirm-title="出品を取り消しますか？"
+                  data-confirm-message="取り消した出品は24時間後にマイページからも非表示になります。"
+                  data-confirm-label="出品を取り消す"
+                  data-confirm-variant="danger">
+                  <button class="danger" type="submit">出品を取り消す</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </section>
+
+      <section class="card chat-card">
+        <div class="chat-header">
+          <div><h2>チャット</h2><span class="meta"><%= item.chatMessages.length %>件のメッセージ</span></div>
+          <% if (item.receiver) { %><span class="status negotiating-status"><%= item.receiver.accountName %>と交渉中</span><% } %>
+        </div>
+
+        <div class="chat-messages" data-chat-messages>
+          <% if (item.chatMessages.length === 0) { %>
+            <div class="chat-empty">
+              <div><strong>まだメッセージはありません。</strong><p>受け取りを希望する場合は、出品者へ最初のメッセージを送りましょう。</p></div>
+            </div>
+          <% } %>
+
+          <% item.chatMessages.forEach(chat => { %>
+            <% const isOwn = currentAccount && chat.senderAccountId === currentAccount.id; %>
+            <div class="chat-message <%= isOwn ? 'own' : '' %>">
+              <div class="chat-avatar" aria-hidden="true"><%= chat.sender.accountName.slice(0, 1) %></div>
+              <div class="chat-content">
+                <p class="chat-meta"><%= chat.sender.accountName %>・<%= formatDate(chat.sentAt) %></p>
+                <div class="chat-bubble"><%= chat.message %></div>
+                <% if (item.receiver && item.receiver.id === chat.sender.id) { %>
+                  <span class="status negotiating-status" style="margin-top:5px;">現在の交渉相手</span>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="chat-composer">
+          <% if (item.isCanceled) { %>
+            <div class="empty-state"><strong>この出品は取り消し済みです。</strong><p>新しいメッセージは送信できません。</p></div>
+          <% } else if (item.completedAt) { %>
+            <div class="empty-state"><strong>この譲渡は完了しています。</strong><p>チャットは閲覧のみできます。</p></div>
+          <% } else if (currentAccount) { %>
+            <form action="/items/<%= item.id %>/messages" method="post">
+              <div class="form-field">
+                <label for="message">メッセージ</label>
+                <textarea id="message" name="message" placeholder="例：この教科書を受け取りたいです。受け渡し場所を相談できますか？" required></textarea>
+              </div>
+              <div class="chat-composer-actions"><button class="primary" type="submit">メッセージを送る</button></div>
+            </form>
+          <% } else { %>
+            <div class="empty-state"><strong>チャットにはログインが必要です。</strong><p>ログイン後、この出品について相談できます。</p><a class="button-link primary" href="/login">ログインする</a></div>
+          <% } %>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <%- include("partials/footer") %>
+</body>
+</html>

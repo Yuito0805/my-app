@@ -1,0 +1,329 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f6f8;
+      color: #222;
+    }
+
+    header {
+      background: #23395d;
+      color: white;
+      padding: 24px 32px;
+    }
+
+    header a { color: white; }
+
+    nav {
+      background: #1b2d49;
+      padding: 10px 32px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    nav a, nav button {
+      color: white;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 999px;
+      padding: 7px 12px;
+      text-decoration: none;
+      cursor: pointer;
+      font: inherit;
+      margin: 0;
+    }
+
+    nav form { margin: 0; }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1, h2, h3 { margin-top: 0; }
+
+    hr {
+      border: none;
+      border-top: 1px solid #dde2eb;
+      margin: 18px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      margin-bottom: 18px;
+    }
+
+    .notice {
+      background: #e8f4ff;
+      border-left: 5px solid #3498db;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+    }
+
+    .error {
+      background: #ffecec;
+      border-left: 5px solid #e74c3c;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+
+    input, textarea, button, select { font: inherit; }
+
+    input, textarea, select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      border: 1px solid #ccd2dc;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    input[readonly], input:disabled {
+      background: #eef2f7;
+      color: #555;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button, .button-link {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #23395d;
+      color: white;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .secondary { background: #667085; }
+    .danger { background: #b42318; }
+    .success { background: #027a48; }
+
+    .small-button {
+      padding: 7px 10px;
+      font-size: 0.9rem;
+    }
+
+    .item-card {
+      border: 1px solid #dde2eb;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+
+    .my-item-card { background: #fbfcff; }
+    .highlight-card { background: #fffaf0; border-color: #fedf89; }
+
+    .meta {
+      color: #667085;
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #23395d;
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-right: 4px;
+    }
+
+    .open-status { background: #e8f4ff; color: #175cd3; }
+    .negotiating-status { background: #fff7e6; color: #b54708; }
+    .completed-status { background: #ecfdf3; color: #027a48; }
+    .canceled-status { background: #fff1f0; color: #b42318; }
+    .update-status { background: #fff7e6; color: #b54708; }
+
+    .message {
+      border-left: 4px solid #dde2eb;
+      padding: 10px 12px;
+      margin: 10px 0;
+      background: #fafafa;
+      border-radius: 8px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      font-weight: normal;
+      margin-top: 12px;
+    }
+
+    .checkbox-label input {
+      width: auto;
+      margin-right: 8px;
+    }
+
+    .course-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .suggestions {
+      border: 1px solid #dde2eb;
+      border-radius: 10px;
+      background: #fafafa;
+      padding: 10px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .suggestion-item {
+      border: 1px solid #dde2eb;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 8px 0;
+      background: white;
+    }
+
+    .fixed-note {
+      background: #ecfdf3;
+      border-left: 5px solid #12b76a;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .page-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .summary-list {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .summary-box {
+      background: #f8fafc;
+      border: 1px solid #dde2eb;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .summary-box strong {
+      display: block;
+      font-size: 1.4rem;
+      margin-top: 4px;
+    }
+
+
+
+    .usage-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .step-card {
+      background: #f8fafc;
+      border: 1px solid #dde2eb;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 26px;
+      height: 26px;
+      line-height: 26px;
+      border-radius: 999px;
+      background: #23395d;
+      color: white;
+      text-align: center;
+      font-weight: bold;
+      margin-right: 6px;
+    }
+
+    .result-summary {
+      background: #f8fafc;
+      border: 1px solid #dde2eb;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 14px;
+    }
+
+    .empty-state {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 16px;
+      color: #475467;
+    }
+
+    .warning-note {
+      background: #fff7e6;
+      border-left: 5px solid #f79009;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+
+    button:disabled, .disabled-button {
+      background: #98a2b3;
+      cursor: not-allowed;
+      color: white;
+    }
+
+    @media (max-width: 800px) {
+      .grid, .course-grid, .summary-list, .usage-steps {
+        grid-template-columns: 1fr;
+      }
+
+      header, nav, main {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+    }
+  </style>
+</head>

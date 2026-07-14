@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "マイページ" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+
+  <main>
+    <% const openItems = myItems.filter(item => !item.isCanceled && !item.completedAt && !item.receiver); %>
+    <% const negotiatingItems = myItems.filter(item => !item.isCanceled && !item.completedAt && item.receiver); %>
+
+    <div class="page-header">
+      <h1>マイページ</h1>
+      <p><%= currentAccount.accountName %>さんの出品・問い合わせ・お気に入り・保存した検索をまとめて確認できます。</p>
+    </div>
+
+    <div class="stat-grid stat-grid-seven">
+      <div class="stat-card"><span class="stat-label">未読通知</span><strong class="stat-number"><%= unreadCount %></strong></div>
+      <div class="stat-card"><span class="stat-label">新規チャット</span><strong class="stat-number"><%= unreadItems.length %></strong></div>
+      <div class="stat-card"><span class="stat-label">募集中</span><strong class="stat-number"><%= openItems.length %></strong></div>
+      <div class="stat-card"><span class="stat-label">交渉中</span><strong class="stat-number"><%= negotiatingItems.length %></strong></div>
+      <div class="stat-card"><span class="stat-label">お気に入り</span><strong class="stat-number"><%= favoriteItems.length %></strong></div>
+      <div class="stat-card"><span class="stat-label">保存した検索</span><strong class="stat-number"><%= savedSearches.length %></strong></div>
+      <div class="stat-card"><span class="stat-label">履修科目</span><strong class="stat-number"><%= enrolledCourses.length %></strong></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab-list" role="tablist" aria-label="マイページの表示切り替え">
+        <button class="tab-button active" type="button" role="tab" data-tab-target="updates">新規更新 <%= unreadItems.length + notificationSummary.length %></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="listings">自分の出品 <%= myItems.length %></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="chats">問い合わせ中 <%= myChatThreads.length %></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="favorites">お気に入り <%= favoriteItems.length %></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="recent">最近見たもの <%= recentViews.length %></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="saved">保存した検索 <%= savedSearches.length %></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="courses">履修科目 <%= enrolledCourses.length %></button>
+      </div>
+    </div>
+
+    <section class="tab-panel active" data-tab-panel="updates" role="tabpanel">
+      <div class="card">
+        <div class="section-header">
+          <div><h2>新規更新</h2><p>保存検索・お気に入り・チャットに関する未読情報をまとめています。</p></div>
+          <a class="button-link secondary small-button" href="/notifications">通知センターを開く</a>
+        </div>
+
+        <% if (notificationSummary.length > 0) { %>
+          <div class="notification-compact-list">
+            <% notificationSummary.forEach(notification => { %>
+              <a class="notification-compact-card" href="/notifications/<%= notification.id %>/open">
+                <span class="notification-dot" aria-hidden="true"></span>
+                <span><strong><%= notification.message %></strong><small><%= formatDate(notification.createdAt) %></small></span>
+                <span aria-hidden="true">›</span>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+
+        <% if (unreadItems.length === 0 && notificationSummary.length === 0) { %>
+          <div class="empty-state"><strong>現在、新しい更新はありません。</strong><p>新しい出品やメッセージが届くと、ここやヘッダーの通知件数に表示されます。</p></div>
+        <% } else if (unreadItems.length > 0) { %>
+          <h3 class="subsection-title">新しいチャット</h3>
+          <div class="thread-list">
+            <% unreadItems.forEach(item => { %>
+              <% const latestMessage = item.chatMessages[item.chatMessages.length - 1]; %>
+              <a class="thread-card" href="/items/<%= item.id %>">
+                <span class="thread-icon"><img src="/images/book-placeholder.svg" alt=""></span>
+                <span class="thread-main">
+                  <span class="button-row"><span class="thread-title"><%= item.textbook.title %></span><span class="status update-status">新規更新</span><span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span></span>
+                  <span class="thread-preview"><%= latestMessage ? `${latestMessage.sender.accountName}：${latestMessage.message}` : '新しいメッセージがあります' %></span>
+                </span>
+                <span class="thread-arrow">›</span>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="listings" role="tabpanel">
+      <div class="card">
+        <div class="section-header">
+          <div><h2>自分の出品</h2><p>取り消し済みの出品は、取り消しから<%= canceledItemVisibleHours %>時間後に非表示になります。</p></div>
+          <a class="button-link primary small-button" href="/items/new">＋ 新しく出品</a>
+        </div>
+        <% if (myItems.length === 0) { %>
+          <div class="empty-state"><strong>まだ出品した教科書はありません。</strong><p>使い終わった教科書を出品してみましょう。</p><a class="button-link primary" href="/items/new">教科書を出品する</a></div>
+        <% } else { %>
+          <div class="book-grid">
+            <% myItems.forEach(item => { %>
+              <%- include("partials/item-card", {
+                item,
+                currentAccount,
+                favoriteItemIds,
+                currentUrl: '/mypage?tab=listings',
+                recommendationReason: unreadItemIds.includes(item.id) ? '新規更新あり' : null,
+                recommendationReasons: [],
+                recommendationScore: 0,
+                showRecommendationFeedback: false,
+                getItemStatusClass,
+                getItemStatusLabel
+              }) %>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="chats" role="tabpanel">
+      <div class="card">
+        <div class="section-header"><div><h2>問い合わせ中の譲渡品</h2><p>自分がチャットを送った譲渡品を、重複せず一覧表示します。</p></div><a class="button-link secondary small-button" href="/">教科書を探す</a></div>
+        <% if (myChatThreads.length === 0) { %>
+          <div class="empty-state"><strong>まだ問い合わせた譲渡品はありません。</strong><p>気になる教科書の詳細画面から出品者へメッセージを送れます。</p><a class="button-link primary" href="/">教科書を探す</a></div>
+        <% } else { %>
+          <div class="thread-list">
+            <% myChatThreads.forEach(thread => { %>
+              <% const item = thread.item; %>
+              <a class="thread-card" href="/items/<%= item.id %>">
+                <span class="thread-icon"><img src="/images/book-placeholder.svg" alt=""></span>
+                <span class="thread-main">
+                  <span class="button-row"><span class="thread-title"><%= item.textbook.title %></span><span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span><% if (unreadItemIds.includes(item.id)) { %><span class="status update-status">新規更新</span><% } %></span>
+                  <span class="thread-preview">自分：<%= thread.latestOwnMessage.message %></span>
+                  <span class="meta"><%= formatDate(thread.latestOwnMessage.sentAt) %>・出品者 <%= item.seller.accountName %></span>
+                </span>
+                <span class="thread-arrow">›</span>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="favorites" role="tabpanel">
+      <div class="card">
+        <div class="section-header"><div><h2>お気に入り</h2><p>あとで確認したい教科書を保存しています。状態が変わると通知が届きます。</p></div><a class="button-link secondary small-button" href="/">教科書を探す</a></div>
+        <% if (favoriteItems.length === 0) { %>
+          <div class="empty-state"><strong>お気に入りはまだありません。</strong><p>譲渡品カードのハートを押すと、ここに保存できます。</p><a class="button-link primary" href="/">教科書を探す</a></div>
+        <% } else { %>
+          <div class="book-grid">
+            <% favoriteItems.forEach(item => { %>
+              <%- include("partials/item-card", {
+                item,
+                currentAccount,
+                favoriteItemIds,
+                currentUrl: '/mypage?tab=favorites',
+                recommendationReason: null,
+                recommendationReasons: [],
+                recommendationScore: 0,
+                showRecommendationFeedback: false,
+                getItemStatusClass,
+                getItemStatusLabel
+              }) %>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="recent" role="tabpanel">
+      <div class="card">
+        <div class="section-header"><div><h2>最近見た教科書</h2><p>直近に詳細を開いた教科書を最大8件表示します。</p></div><a class="button-link secondary small-button" href="/">教科書を探す</a></div>
+        <% if (recentViews.length === 0) { %>
+          <div class="empty-state"><strong>閲覧履歴はまだありません。</strong><p>教科書の詳細を見ると、ここからすぐ戻れるようになります。</p></div>
+        <% } else { %>
+          <div class="book-grid">
+            <% recentViews.forEach(view => { %>
+              <% const item = view.item; %>
+              <%- include("partials/item-card", {
+                item,
+                currentAccount,
+                favoriteItemIds,
+                currentUrl: '/mypage?tab=recent',
+                recommendationReason: `最終閲覧：${formatDate(view.viewedAt)}`,
+                recommendationReasons: [],
+                recommendationScore: 0,
+                showRecommendationFeedback: false,
+                getItemStatusClass,
+                getItemStatusLabel
+              }) %>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="saved" role="tabpanel">
+      <div class="card">
+        <div class="section-header"><div><h2>保存した検索</h2><p>よく使う条件を再利用し、前回確認後の新着件数を確認できます。</p></div><a class="button-link secondary small-button" href="/">新しい条件で検索</a></div>
+        <% if (savedSearches.length === 0) { %>
+          <div class="empty-state"><strong>保存した検索はまだありません。</strong><p>トップページで条件を指定し、「この検索条件を保存」から登録できます。</p><a class="button-link primary" href="/">検索条件を作る</a></div>
+        <% } else { %>
+          <div class="saved-search-list">
+            <% savedSearches.forEach(search => { %>
+              <article class="saved-search-card">
+                <div class="saved-search-card-main">
+                  <div class="button-row">
+                    <h3><%= search.name %></h3>
+                    <% if (search.newItemCount > 0) { %><span class="status update-status">新着 <%= search.newItemCount %>件</span><% } %>
+                  </div>
+                  <p><%= search.description %></p>
+                  <span class="meta">最終確認：<%= formatDate(search.lastCheckedAt) %></span>
+                </div>
+                <div class="saved-search-actions">
+                  <a class="button-link primary small-button" href="/saved-searches/<%= search.id %>/results">結果を見る</a>
+                  <form action="/saved-searches/<%= search.id %>/delete" method="post"
+                    data-confirm
+                    data-confirm-title="保存した検索を削除しますか？"
+                    data-confirm-message="「<%= search.name %>」と、この検索に紐づく通知を削除します。"
+                    data-confirm-label="削除する"
+                    data-confirm-variant="danger">
+                    <button class="danger small-button" type="submit">削除</button>
+                  </form>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="courses" role="tabpanel">
+      <div class="card">
+        <div class="section-header"><div><h2>履修科目</h2><p>登録した教科は、トップページの新着棚とおすすめ順位に反映されます。</p></div><a class="button-link primary small-button" href="/courses">履修科目を編集</a></div>
+        <% if (enrolledCourses.length === 0) { %>
+          <div class="empty-state"><strong>履修科目はまだ登録されていません。</strong><p>今学期の教科を登録すると、関連する教科書を見つけやすくなります。</p><a class="button-link primary" href="/courses">履修科目を設定する</a></div>
+        <% } else { %>
+          <div class="enrolled-course-summary">
+            <% enrolledCourses.forEach(course => { %>
+              <a class="enrolled-course-pill" href="/?q=<%= encodeURIComponent(course.courseName) %>&target=course&condition=all&status=open&sort=newest">
+                <strong><%= course.courseName %></strong><span><%= course.teacherName %><% if (course.term) { %>・<%= course.term %><% } %></span>
+              </a>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  </main>
+
+  <%- include("partials/footer") %>
+</body>
+</html>

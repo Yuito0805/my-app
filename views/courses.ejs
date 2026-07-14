@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "履修科目の設定" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+  <main>
+    <div class="page-header course-page-header">
+      <div><span class="section-eyebrow">PERSONALIZE</span><h1>履修科目の設定</h1><p>今学期の教科を登録すると、新着棚とおすすめが授業に合わせて変化します。</p></div>
+      <div class="course-progress-card"><span>登録済み</span><strong><%= enrolledCourses.length %> / 12</strong></div>
+    </div>
+
+    <section class="card enrolled-course-card">
+      <div class="section-header"><div><h2>現在の履修科目</h2><p>教科名を押すと、その教科の募集中教科書を検索できます。</p></div></div>
+      <% if (enrolledCourses.length === 0) { %>
+        <div class="empty-state compact-empty"><strong>まだ履修科目がありません。</strong><p>下の一覧から今学期の教科を追加してください。</p></div>
+      <% } else { %>
+        <div class="selected-course-grid">
+          <% enrolledCourses.forEach(course => { %>
+            <article class="selected-course-card">
+              <a href="/?q=<%= encodeURIComponent(course.courseName) %>&target=course&condition=all&status=open&sort=newest"><strong><%= course.courseName %></strong><span><%= course.teacherName %></span></a>
+              <div class="course-meta-row"><% if (course.faculty) { %><span><%= course.faculty %></span><% } %><% if (course.term) { %><span><%= course.term %></span><% } %><% if (course.campus) { %><span><%= course.campus %></span><% } %></div>
+              <form action="/courses/<%= course.id %>/unenroll" method="post">
+                <input type="hidden" name="returnTo" value="<%= currentUrl %>"><button class="text-button danger-text" type="submit">履修から外す</button>
+              </form>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="course-browser">
+      <div class="section-header"><div><h2>教科を探して追加</h2><p>教科名、担当教員、学部名から検索できます。</p></div></div>
+      <form class="course-search-form" action="/courses" method="get">
+        <input type="search" name="q" value="<%= q %>" placeholder="例：データモデリング、藤井、理工学部"><button class="primary" type="submit">教科を検索</button><% if (q) { %><a class="button-link secondary" href="/courses">クリア</a><% } %>
+      </form>
+      <div class="course-grid">
+        <% courses.forEach(course => { %>
+          <% const enrolled = enrolledCourseIds.includes(course.id); %>
+          <article class="course-card <%= enrolled ? 'selected' : '' %>">
+            <div class="course-card-heading"><span class="course-symbol" aria-hidden="true"><%= course.courseName.slice(0, 1) %></span><div><h3><%= course.courseName %></h3><p><%= course.teacherName %></p></div></div>
+            <div class="course-meta-row"><% if (course.faculty) { %><span><%= course.faculty %></span><% } %><% if (course.term) { %><span><%= course.term %></span><% } %><% if (course.campus) { %><span><%= course.campus %></span><% } %></div>
+            <p class="meta">関連教科書 <%= course._count.textbookCourses %>冊・登録者 <%= course._count.enrolledAccounts %>人</p>
+            <% if (enrolled) { %>
+              <form action="/courses/<%= course.id %>/unenroll" method="post"><input type="hidden" name="returnTo" value="<%= currentUrl %>"><button class="secondary full-button" type="submit">✓ 履修中</button></form>
+            <% } else { %>
+              <form action="/courses/<%= course.id %>/enroll" method="post"><input type="hidden" name="returnTo" value="<%= currentUrl %>"><button class="primary full-button" type="submit">＋ 履修に追加</button></form>
+            <% } %>
+          </article>
+        <% }) %>
+      </div>
+      <% if (courses.length === 0) { %><div class="empty-state"><strong>該当する教科がありません。</strong><p>別の教科名や担当教員名を試してください。</p></div><% } %>
+    </section>
+  </main>
+  <%- include("partials/footer") %>
+</body>
+</html>

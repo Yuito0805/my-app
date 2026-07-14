@@ -1,21 +1,257 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>ユーザー一覧</title>
-</head>
+<%- include("partials/head", { title: "教科書を探す" }) %>
 <body>
-  <h1>ユーザー一覧</h1>
-  <ul>
-    <% users.forEach(user => { %>
-      <li><%= user.name %> (ID: <%= user.id %>)</li>
-    <% }) %>
-  </ul>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
 
-  <h2>新しく追加する</h2>
-  <form action="/users" method="post">
-    <input type="text" name="name" placeholder="お名前を入力" required>
-    <button type="submit">追加じゃ！</button>
-  </form>
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <span class="hero-eyebrow">慶應生向け・金銭の仲介なし</span>
+        <h1>授業で使う教科書を、<br>必要な人へつなげよう。</h1>
+        <p>教科書名・教科名・担当教員名などから探し、よく使う検索条件は保存できます。</p>
+
+        <form class="search-panel" action="/" method="get" aria-label="譲渡品を検索" data-search-form>
+          <div class="search-row">
+            <div class="search-input-wrap">
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <input id="q" type="search" name="q" value="<%= q %>" placeholder="教科書名・教科名・担当教員名を入力" aria-label="検索キーワード" autocomplete="off" data-search-suggestions>
+              <div class="search-suggestions" data-suggestion-list hidden role="listbox" aria-label="検索候補"></div>
+            </div>
+            <button class="primary search-button" type="submit">検索する</button>
+          </div>
+
+          <div class="advanced-search-grid">
+            <label class="compact-field">
+              <span>検索対象</span>
+              <select name="target">
+                <option value="all" <%= searchTarget === 'all' ? 'selected' : '' %>>すべて</option>
+                <option value="title" <%= searchTarget === 'title' ? 'selected' : '' %>>教科書名</option>
+                <option value="author" <%= searchTarget === 'author' ? 'selected' : '' %>>著者名</option>
+                <option value="course" <%= searchTarget === 'course' ? 'selected' : '' %>>教科名</option>
+                <option value="teacher" <%= searchTarget === 'teacher' ? 'selected' : '' %>>担当教員名</option>
+              </select>
+            </label>
+
+            <label class="compact-field">
+              <span>本の状態</span>
+              <select name="condition">
+                <option value="all">すべて</option>
+                <% conditionOptions.forEach(option => { %>
+                  <option value="<%= option %>" <%= conditionFilter === option ? 'selected' : '' %>><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+
+            <label class="compact-field">
+              <span>取引状態</span>
+              <select name="status">
+                <option value="open" <%= statusFilter === 'open' ? 'selected' : '' %>>募集中</option>
+                <option value="negotiating" <%= statusFilter === 'negotiating' ? 'selected' : '' %>>交渉中</option>
+                <option value="completed" <%= statusFilter === 'completed' ? 'selected' : '' %>>譲渡完了</option>
+                <option value="all" <%= statusFilter === 'all' ? 'selected' : '' %>>すべて</option>
+              </select>
+            </label>
+
+            <label class="compact-field">
+              <span>並び順</span>
+              <select name="sort">
+                <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>新着順</option>
+                <option value="updated" <%= sort === 'updated' ? 'selected' : '' %>>更新が新しい順</option>
+                <option value="condition" <%= sort === 'condition' ? 'selected' : '' %>>状態が良い順</option>
+                <option value="popular" <%= sort === 'popular' ? 'selected' : '' %>>お気に入りが多い順</option>
+              </select>
+            </label>
+          </div>
+          <% if (activeFilters.length > 0) { %>
+            <div class="active-filter-list" aria-label="選択中の検索条件">
+              <% activeFilters.forEach(filter => { %><a class="active-filter-chip" href="<%= filter.url %>"><%= filter.label %><span aria-hidden="true">×</span></a><% }) %>
+              <a class="clear-filter-link" href="/">すべて解除</a>
+            </div>
+          <% } %>
+          <div class="search-progress" aria-hidden="true" data-search-progress><span></span></div>
+        </form>
+
+        <% if (currentAccount) { %>
+          <form class="save-search-panel" action="/saved-searches" method="post">
+            <input type="hidden" name="keyword" value="<%= q %>">
+            <input type="hidden" name="searchTarget" value="<%= searchTarget %>">
+            <input type="hidden" name="condition" value="<%= conditionFilter %>">
+            <input type="hidden" name="itemStatus" value="<%= statusFilter %>">
+            <input type="hidden" name="sortOrder" value="<%= sort %>">
+            <input type="hidden" name="returnTo" value="<%= currentUrl %>">
+            <label>
+              <span>この検索条件を保存</span>
+              <input type="text" name="name" maxlength="40" placeholder="例：Webプログラミング・募集中" required>
+            </label>
+            <button class="secondary" type="submit">保存する</button>
+          </form>
+        <% } %>
+      </div>
+    </section>
+
+    <% if (activeSavedSearch) { %>
+      <section class="saved-search-banner" role="status">
+        <div>
+          <span class="section-eyebrow">SAVED SEARCH</span>
+          <strong>保存した検索「<%= activeSavedSearch.name %>」を表示中</strong>
+          <p>この画面を開いた時点で、新着確認日時を更新しました。</p>
+        </div>
+        <a class="button-link secondary small-button" href="/mypage?tab=saved">保存した検索を管理</a>
+      </section>
+    <% } %>
+
+    <% if (showDiscovery && currentAccount) { %>
+      <% if (enrolledCourses.length === 0) { %>
+        <section class="personalization-callout">
+          <div class="personalization-icon" aria-hidden="true">✦</div>
+          <div><strong>履修科目を登録すると、必要な教科書を優先表示できます。</strong><p>教科書シェアならではの「授業に合わせた探し方」を始めましょう。</p></div>
+          <a class="button-link primary" href="/courses">履修科目を設定</a>
+        </section>
+      <% } else { %>
+        <div class="course-chip-row" aria-label="履修中の教科">
+          <span>履修中</span>
+          <% enrolledCourses.slice(0, 6).forEach(course => { %><a href="/?q=<%= encodeURIComponent(course.courseName) %>&target=course&condition=all&status=open&sort=newest"><%= course.courseName %></a><% }) %>
+          <a class="manage-chip" href="/courses">設定</a>
+        </div>
+      <% } %>
+
+      <% if (discoveryShelves && discoveryShelves.enrolledItems.length > 0) { %>
+        <%- include("partials/item-shelf", {
+          sectionId: 'enrolled-shelf', eyebrow: 'YOUR COURSES', title: '履修科目の新着',
+          description: '登録した履修科目に対応する、現在募集中の教科書です。',
+          items: discoveryShelves.enrolledItems, actionHref: '/courses', actionLabel: '履修科目を編集',
+          currentAccount, favoriteItemIds, currentUrl, showFeedback: false, getItemStatusClass, getItemStatusLabel
+        }) %>
+      <% } %>
+
+      <% if (recommendationSection && recommendationSection.items.length > 0) { %>
+        <%- include("partials/item-shelf", {
+          sectionId: 'recommendation-shelf', eyebrow: 'FOR YOU', title: recommendationSection.title,
+          description: recommendationSection.description, items: recommendationSection.items,
+          actionHref: '/mypage?tab=favorites', actionLabel: 'お気に入りを見る',
+          currentAccount, favoriteItemIds, currentUrl, showFeedback: true, getItemStatusClass, getItemStatusLabel
+        }) %>
+      <% } %>
+
+      <% if (discoveryShelves) { %>
+        <%- include("partials/item-shelf", {
+          sectionId: 'trending-shelf', eyebrow: 'TRENDING', title: 'いま注目されている教科書',
+          description: 'お気に入り数と閲覧数から、関心が高まっている出品を表示します。',
+          items: discoveryShelves.trendingItems, actionHref: '/?sort=popular&target=all&condition=all&status=open', actionLabel: '人気順で見る',
+          currentAccount, favoriteItemIds, currentUrl, showFeedback: false, getItemStatusClass, getItemStatusLabel
+        }) %>
+        <%- include("partials/item-shelf", {
+          sectionId: 'recent-shelf', eyebrow: 'RECENTLY VIEWED', title: '最近見た教科書',
+          description: '前に確認した譲渡品へ、すぐに戻れます。',
+          items: discoveryShelves.recentItems, actionHref: '/mypage?tab=recent', actionLabel: '閲覧履歴を見る',
+          currentAccount, favoriteItemIds, currentUrl, showFeedback: false, getItemStatusClass, getItemStatusLabel
+        }) %>
+      <% } %>
+    <% } else if (currentAccount && recommendationSection && recommendationSection.items.length > 0) { %>
+      <%- include("partials/item-shelf", {
+        sectionId: 'recommendation-shelf', eyebrow: 'FOR YOU', title: recommendationSection.title,
+        description: recommendationSection.description, items: recommendationSection.items,
+        actionHref: '/mypage?tab=favorites', actionLabel: 'お気に入りを見る',
+        currentAccount, favoriteItemIds, currentUrl, showFeedback: true, getItemStatusClass, getItemStatusLabel
+      }) %>
+    <% } %>
+
+    <div class="content-grid">
+      <section>
+        <div class="result-bar">
+          <div>
+            <h2><%= q ? `「${q}」の検索結果` : '教科書の譲渡品' %></h2>
+            <div class="result-meta">
+              <% const filterLabel = statusFilter === 'open' ? '募集中' : statusFilter === 'negotiating' ? '交渉中' : statusFilter === 'completed' ? '譲渡完了' : '取り消し済み以外すべて'; %>
+              <%= filterLabel %>・<%= conditionFilter === 'all' ? '状態指定なし' : conditionFilter %>・全<%= totalItems %>件
+            </div>
+          </div>
+          <% if (q || statusFilter !== 'open' || searchTarget !== 'all' || conditionFilter !== 'all' || sort !== 'newest') { %>
+            <a class="button-link secondary small-button" href="/">条件をリセット</a>
+          <% } %>
+        </div>
+
+        <% if (items.length === 0) { %>
+          <div class="empty-state">
+            <strong>条件に合う譲渡品が見つかりませんでした。</strong>
+            <p>検索対象や本の状態を変更するか、検索条件を保存して新着を待つことができます。</p>
+            <% if (currentAccount) { %>
+              <a class="button-link primary" href="/items/new">教科書を出品する</a>
+            <% } else { %>
+              <a class="button-link primary" href="/login">ログインして出品する</a>
+            <% } %>
+          </div>
+        <% } else { %>
+          <div class="book-grid">
+            <% items.forEach(item => { %>
+              <%- include("partials/item-card", {
+                item,
+                currentAccount,
+                favoriteItemIds,
+                currentUrl,
+                recommendationReason: null,
+                recommendationReasons: [],
+                recommendationScore: 0,
+                showRecommendationFeedback: false,
+                getItemStatusClass,
+                getItemStatusLabel
+              }) %>
+            <% }) %>
+          </div>
+
+          <% if (totalPages > 1) { %>
+            <nav class="pagination" aria-label="検索結果のページ切り替え">
+              <% if (currentPage > 1) { %><a href="<%= pageUrl(currentPage - 1) %>">前へ</a><% } %>
+              <% for (let page = 1; page <= totalPages; page += 1) { %>
+                <% if (page === 1 || page === totalPages || Math.abs(page - currentPage) <= 2) { %>
+                  <a class="<%= page === currentPage ? 'active' : '' %>" href="<%= pageUrl(page) %>" aria-current="<%= page === currentPage ? 'page' : 'false' %>"><%= page %></a>
+                <% } else if (page === currentPage - 3 || page === currentPage + 3) { %>
+                  <span>…</span>
+                <% } %>
+              <% } %>
+              <% if (currentPage < totalPages) { %><a href="<%= pageUrl(currentPage + 1) %>">次へ</a><% } %>
+            </nav>
+          <% } %>
+        <% } %>
+      </section>
+
+      <aside>
+        <% if (currentAccount) { %>
+          <section class="card sticky-card">
+            <h2>こんにちは、<%= currentAccount.accountName %>さん</h2>
+            <p class="meta">通知・保存した検索・お気に入りはマイページから確認できます。</p>
+            <div class="button-row">
+              <a class="button-link primary full-button" href="/items/new">＋ 教科書を出品する</a>
+              <a class="button-link secondary full-button" href="/notifications">
+                通知を見る
+                <% if (unreadCount > 0) { %><span class="nav-badge"><%= unreadCount %></span><% } %>
+              </a>
+              <a class="button-link secondary full-button" href="/mypage">マイページを見る</a>
+              <a class="button-link secondary full-button" href="/courses">履修科目を設定する</a>
+            </div>
+          </section>
+        <% } else { %>
+          <section class="card sticky-card">
+            <h2>出品・お気に入りを始める</h2>
+            <p class="meta">ログインすると、保存検索、新着通知、おすすめの調整を利用できます。</p>
+            <a class="button-link primary full-button" href="/login">ログイン・新規登録</a>
+          </section>
+        <% } %>
+
+        <section class="card">
+          <h2>探し方のコツ</h2>
+          <div class="steps" style="grid-template-columns: 1fr;">
+            <div class="step"><span class="step-number">1</span><h3>条件を絞る</h3><p>教科名や担当教員名、本の状態を組み合わせます。</p></div>
+            <div class="step"><span class="step-number">2</span><h3>検索を保存</h3><p>同じ条件に合う新しい出品を通知で確認できます。</p></div>
+            <div class="step"><span class="step-number">3</span><h3>おすすめを調整</h3><p>「興味なし」を使うと、次回以降の候補から除外されます。</p></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <%- include("partials/footer") %>
 </body>
 </html>

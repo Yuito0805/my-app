@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 120" role="img" aria-label="教科書のプレースホルダー">
+  <defs>
+    <linearGradient id="cover" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#29496d"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect x="14" y="6" width="68" height="108" rx="7" fill="url(#cover)"/>
+  <rect x="20" y="6" width="7" height="108" fill="#ffffff" opacity=".2"/>
+  <rect x="34" y="27" width="36" height="4" rx="2" fill="#ffffff" opacity=".9"/>
+  <rect x="34" y="37" width="27" height="3" rx="1.5" fill="#ffffff" opacity=".55"/>
+  <path d="M40 59h25v28H40z" fill="#ffffff" opacity=".14"/>
+  <path d="M46 66h13M46 73h13M46 80h9" stroke="#ffffff" stroke-linecap="round" opacity=".8"/>
+</svg>

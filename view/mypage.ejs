@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "マイページ" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount }) %>
+
+  <main>
+    <%- include("partials/messages", { notice, error }) %>
+
+    <section class="card">
+      <h2>マイページ</h2>
+      <p><strong><%= currentAccount.accountName %></strong>（<%= currentAccount.email %>）の出品物と、投稿したチャットを確認できます。</p>
+      <p class="meta">取り消し済みの出品は、取り消しから<%= canceledItemVisibleHours %>時間後にこの画面から非表示になります。</p>
+      <div class="page-links">
+        <a class="button-link" href="/items/new">教科書を出品する</a>
+        <a class="button-link secondary" href="/">譲渡品を探す</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>新規更新あり</h2>
+      <p class="meta">自分以外の利用者が新しくチャットを送った譲渡品を表示します。詳細画面を開くと既読扱いになります。</p>
+
+      <% if (unreadItems.length === 0) { %>
+        <div class="empty-state"><strong>現在、新規更新はありません。</strong><p>新しいチャットが届くと、この欄に表示されます。</p></div>
+      <% } %>
+
+      <% unreadItems.forEach(item => { %>
+        <% const courseNames = item.textbook.textbookCourses.map(tc => tc.course.courseName).join("、") || "未登録"; %>
+        <div class="item-card highlight-card">
+          <h3><%= item.textbook.title %></h3>
+          <p>
+            <span class="status update-status">新規更新あり</span>
+            <span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span>
+          </p>
+          <p class="meta">
+            関連教科：<%= courseNames %><br>
+            出品者：<%= item.seller.accountName %><br>
+            交渉相手：<%= item.receiver ? item.receiver.accountName : "未定" %>
+          </p>
+          <a class="button-link small-button" href="/items/<%= item.id %>">詳細・チャットを見る</a>
+        </div>
+      <% }) %>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>自分の出品物</h2>
+
+        <% if (myItems.length === 0) { %>
+          <div class="empty-state"><strong>表示できる出品物はありません。</strong><p>教科書を出品すると、ここに自分の出品物が表示されます。取り消し済み出品は24時間後に非表示になります。</p><a class="button-link small-button" href="/items/new">教科書を出品する</a></div>
+        <% } %>
+
+        <% myItems.forEach(item => { %>
+          <% const courseNames = item.textbook.textbookCourses.map(tc => tc.course.courseName).join("、") || "未登録"; %>
+          <div class="item-card my-item-card">
+            <h3><%= item.textbook.title %></h3>
+            <p>
+              <% if (unreadItemIds.includes(item.id)) { %>
+                <span class="status update-status">新規更新あり</span>
+              <% } %>
+              <span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span>
+            </p>
+            <p class="meta">
+              関連教科：<%= courseNames %><br>
+              状態：<%= item.condition %><br>
+              <% if (item.conditionNote) { %>
+                補足：<%= item.conditionNote %><br>
+              <% } %>
+              交渉相手：<%= item.receiver ? item.receiver.accountName : "未定" %><br>
+              登録日：<%= formatDate(item.createdAt) %>
+              <% if (item.completedAt) { %>
+                <br>譲渡完了日時：<%= formatDate(item.completedAt) %>
+              <% } %>
+              <% if (item.isCanceled && item.canceledAt) { %>
+                <br>取り消し日時：<%= formatDate(item.canceledAt) %>
+              <% } %>
+            </p>
+            <div class="page-links">
+              <a class="button-link small-button" href="/items/<%= item.id %>">詳細・チャットを見る</a>
+              <% if (!item.isCanceled && !item.completedAt) { %>
+                <a class="button-link secondary small-button" href="/items/<%= item.id %>/edit">編集</a>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </section>
+
+      <section class="card">
+        <h2>自分が投稿したチャット</h2>
+        <p class="meta">自分が送信したチャットを新しい順に表示します。そこから該当する譲渡品の詳細へ移動できます。</p>
+
+        <% if (myChatMessages.length === 0) { %>
+          <div class="empty-state"><strong>まだチャットを投稿していません。</strong><p>気になる譲渡品の詳細画面から問い合わせると、ここに自分のチャット履歴が表示されます。</p><a class="button-link small-button" href="/">譲渡品を探す</a></div>
+        <% } %>
+
+        <% myChatMessages.forEach(chat => { %>
+          <% const chatCourseNames = chat.item.textbook.textbookCourses.map(tc => tc.course.courseName).join("、") || "未登録"; %>
+          <div class="item-card">
+            <h3><%= chat.item.textbook.title %></h3>
+            <p>
+              <% if (unreadItemIds.includes(chat.item.id)) { %>
+                <span class="status update-status">新規更新あり</span>
+              <% } %>
+              <span class="status <%= getItemStatusClass(chat.item) %>"><%= getItemStatusLabel(chat.item) %></span>
+            </p>
+            <p class="meta">
+              関連教科：<%= chatCourseNames %><br>
+              出品者：<%= chat.item.seller.accountName %><br>
+              交渉相手：<%= chat.item.receiver ? chat.item.receiver.accountName : "未定" %><br>
+              自分の送信日時：<%= formatDate(chat.sentAt) %>
+            </p>
+            <div class="message">
+              <strong>自分のメッセージ</strong>
+              <p><%= chat.message %></p>
+            </div>
+            <a class="button-link small-button" href="/items/<%= chat.item.id %>">詳細・チャットを見る</a>
+          </div>
+        <% }) %>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

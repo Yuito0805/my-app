@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "ログイン・新規アカウント作成" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount }) %>
+
+  <main>
+    <%- include("partials/messages", { notice, error }) %>
+
+    <% if (currentAccount) { %>
+      <section class="card">
+        <h2>ログイン中</h2>
+        <p><strong><%= currentAccount.accountName %></strong>（<%= currentAccount.email %>）としてログインしています。</p>
+        <div class="page-links">
+          <a class="button-link" href="/">譲渡品を探す</a>
+          <a class="button-link secondary" href="/mypage">マイページへ</a>
+        </div>
+      </section>
+    <% } else { %>
+      <div class="grid">
+        <section class="card">
+          <h2>ログイン</h2>
+          <p>登録済みの名前とメールアドレスを入力するとログインできます。</p>
+          <form action="/login" method="post">
+            <label for="login-name">名前</label>
+            <input id="login-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：利用者零一" required>
+
+            <label for="login-email">メールアドレス</label>
+            <input id="login-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：user01@keio.jp" required>
+
+            <button type="submit">ログイン</button>
+          </form>
+
+          <hr>
+          <h3>アカウントをまだ持っていない方</h3>
+          <p>はじめて利用する場合は、新規アカウントを作成してください。</p>
+          <a class="button-link secondary" href="/login?mode=signup">新規アカウント作成へ</a>
+        </section>
+
+        <section class="card">
+          <h2>新規アカウント作成</h2>
+          <% if (mode !== "signup") { %>
+            <p>新規作成する場合は、左側の「新規アカウント作成へ」を押してください。</p>
+            <p class="meta">大学内利用を想定しているため、@keio.jp で終わるメールアドレスのみ登録できます。</p>
+          <% } else { %>
+            <p>名前と @keio.jp のメールアドレスでアカウントを作成します。</p>
+            <form action="/accounts" method="post">
+              <label for="signup-name">名前</label>
+              <input id="signup-name" type="text" name="accountName" value="<%= prefillName %>" required>
+
+              <label for="signup-email">メールアドレス</label>
+              <input id="signup-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：student@keio.jp" required>
+
+              <button type="submit">この内容でアカウント作成</button>
+            </form>
+          <% } %>
+        </section>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

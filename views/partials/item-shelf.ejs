@@ -1,0 +1,30 @@
+<% if (items && items.length > 0) { %>
+<section class="shelf-section" aria-labelledby="<%= sectionId %>">
+  <div class="section-header shelf-header">
+    <div>
+      <span class="section-eyebrow"><%= eyebrow %></span>
+      <h2 id="<%= sectionId %>"><%= title %></h2>
+      <p><%= description %></p>
+    </div>
+    <% if (actionHref && actionLabel) { %><a class="text-link" href="<%= actionHref %>"><%= actionLabel %> <span aria-hidden="true">→</span></a><% } %>
+  </div>
+  <div class="shelf-track" tabindex="0" aria-label="<%= title %>の教科書一覧">
+    <% items.forEach(item => { %>
+      <div class="shelf-item">
+        <%- include("item-card", {
+          item,
+          currentAccount,
+          favoriteItemIds,
+          currentUrl,
+          recommendationReason: item.dashboardReason || item.recommendationReason || null,
+          recommendationReasons: item.recommendationReasons || [],
+          recommendationScore: item.recommendationScore || 0,
+          showRecommendationFeedback: Boolean(showFeedback),
+          getItemStatusClass,
+          getItemStatusLabel
+        }) %>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>

@@ -7,7 +7,206 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id   Int    @id @default(autoincrement())
-  name String
+model Account {
+  id                     Int                      @id @default(autoincrement()) @map("account_id")
+  accountName            String                   @map("account_name")
+  email                  String                   @unique
+  sellingItems           Item[]                   @relation("SellerItems")
+  receivingItems         Item[]                   @relation("ReceiverItems")
+  chatMessages           ChatMessage[]
+  readStatuses           ItemReadStatus[]
+  favorites              Favorite[]
+  itemViews              ItemView[]
+  savedSearches          SavedSearch[]
+  notifications          Notification[]
+  recommendationFeedback RecommendationFeedback[]
+  enrolledCourses        AccountCourse[]
+
+  @@map("accounts")
+}
+
+model Textbook {
+  id              Int              @id @default(autoincrement()) @map("textbook_id")
+  title           String
+  author          String
+  items           Item[]
+  textbookCourses TextbookCourse[]
+
+  @@unique([title, author])
+  @@map("textbooks")
+}
+
+model Course {
+  id              Int              @id @default(autoincrement()) @map("course_id")
+  courseName      String           @map("course_name")
+  teacherName     String           @map("teacher_name")
+  textbookCourses TextbookCourse[]
+  enrolledAccounts AccountCourse[]
+  faculty          String?          @map("faculty")
+  term             String?          @map("term")
+  campus           String?          @map("campus")
+
+  @@unique([courseName, teacherName])
+  @@map("courses")
+}
+
+model AccountCourse {
+  accountId Int      @map("account_id")
+  courseId  Int      @map("course_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, courseId])
+  @@index([courseId])
+  @@map("account_courses")
+}
+
+model TextbookCourse {
+  textbookId Int      @map("textbook_id")
+  courseId   Int      @map("course_id")
+  textbook   Textbook @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@id([textbookId, courseId])
+  @@map("textbook_courses")
+}
+
+model Item {
+  id                Int       @id @default(autoincrement()) @map("item_id")
+  seedKey           String?   @unique @map("seed_key")
+  sellerAccountId   Int       @map("seller_account_id")
+  receiverAccountId Int?      @map("receiver_account_id")
+  textbookId        Int       @map("textbook_id")
+  condition         String
+  conditionNote     String?   @map("condition_note")
+  isCanceled        Boolean   @default(false) @map("is_canceled")
+  canceledAt        DateTime? @map("canceled_at")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  seller                Account                  @relation("SellerItems", fields: [sellerAccountId], references: [id])
+  receiver              Account?                 @relation("ReceiverItems", fields: [receiverAccountId], references: [id])
+  textbook              Textbook                 @relation(fields: [textbookId], references: [id])
+  chatMessages          ChatMessage[]
+  readStatuses          ItemReadStatus[]
+  favorites             Favorite[]
+  itemViews             ItemView[]
+  notifications         Notification[]
+  recommendationFeedback RecommendationFeedback[]
+
+  @@index([sellerAccountId])
+  @@index([textbookId])
+  @@index([createdAt])
+  @@map("items")
+}
+
+model ChatMessage {
+  id              Int      @id @default(autoincrement()) @map("message_id")
+  seedKey         String?  @unique @map("seed_key")
+  itemId          Int      @map("item_id")
+  senderAccountId Int      @map("sender_account_id")
+  message         String
+  sentAt          DateTime @default(now()) @map("sent_at")
+
+  item   Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  sender Account @relation(fields: [senderAccountId], references: [id])
+
+  @@index([itemId, sentAt])
+  @@map("chat_messages")
+}
+
+model ItemReadStatus {
+  accountId  Int      @map("account_id")
+  itemId     Int      @map("item_id")
+  lastReadAt DateTime @map("last_read_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, itemId])
+  @@map("item_read_statuses")
+}
+
+model Favorite {
+  accountId Int      @map("account_id")
+  itemId    Int      @map("item_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, itemId])
+  @@index([itemId])
+  @@map("favorites")
+}
+
+model ItemView {
+  accountId Int      @map("account_id")
+  itemId    Int      @map("item_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+  viewCount Int      @default(1) @map("view_count")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, itemId])
+  @@index([accountId, viewedAt])
+  @@index([itemId])
+  @@map("item_views")
+}
+
+model SavedSearch {
+  id            Int      @id @default(autoincrement()) @map("saved_search_id")
+  accountId     Int      @map("account_id")
+  name          String
+  keyword       String?
+  searchTarget  String   @default("all") @map("search_target")
+  condition     String?
+  itemStatus    String   @default("open") @map("item_status")
+  sortOrder     String   @default("newest") @map("sort_order")
+  lastCheckedAt DateTime @default(now()) @map("last_checked_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  account       Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+
+  @@unique([accountId, name])
+  @@index([accountId, lastCheckedAt])
+  @@map("saved_searches")
+}
+
+model Notification {
+  id            Int      @id @default(autoincrement()) @map("notification_id")
+  accountId     Int      @map("account_id")
+  type          String
+  itemId        Int?     @map("item_id")
+  savedSearchId Int?     @map("saved_search_id")
+  message       String
+  isRead        Boolean  @default(false) @map("is_read")
+  dedupeKey     String   @unique @map("dedupe_key")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  item        Item?        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  savedSearch SavedSearch? @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, isRead, createdAt])
+  @@map("notifications")
+}
+
+model RecommendationFeedback {
+  accountId Int      @map("account_id")
+  itemId    Int      @map("item_id")
+  feedback  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, itemId])
+  @@index([feedback])
+  @@map("recommendation_feedback")
 }

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "教科書譲渡アプリ" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount }) %>
+
+  <main>
+    <%- include("partials/messages", { notice, error }) %>
+
+    <section class="card">
+      <h2>教科書を探して、チャットで受け渡しを相談する</h2>
+      <p>
+        このアプリは、大学生が不要になった教科書を他の学生へ譲るためのWebアプリです。
+        金銭のやり取りは扱わず、教科書名・教科名で検索し、譲渡品ごとのチャットで受け渡しを相談します。
+      </p>
+      <div class="usage-steps">
+        <div class="step-card">
+          <h3><span class="step-number">1</span>検索する</h3>
+          <p class="meta">教科書名や教科名から、募集中の譲渡品を探します。</p>
+        </div>
+        <div class="step-card">
+          <h3><span class="step-number">2</span>相談する</h3>
+          <p class="meta">気になる譲渡品の詳細画面から、出品者にチャットを送ります。</p>
+        </div>
+        <div class="step-card">
+          <h3><span class="step-number">3</span>受け渡す</h3>
+          <p class="meta">出品者が交渉相手を選び、受け渡し後に譲渡完了にします。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>譲渡品を探す</h2>
+      <p>
+        教科書名または教科名で譲渡品を検索できます。
+        出品は「募集中 → 交渉中 → 譲渡完了」という流れで管理します。
+      </p>
+
+      <form action="/" method="get">
+        <label for="q">教科書名または教科名</label>
+        <input id="q" type="text" name="q" value="<%= q %>" placeholder="例：データ、Webアプリ設計演習">
+
+        <label for="status">表示する出品状態</label>
+        <select id="status" name="status">
+          <option value="open" <%= statusFilter === "open" ? "selected" : "" %>>募集中のみ</option>
+          <option value="negotiating" <%= statusFilter === "negotiating" ? "selected" : "" %>>交渉中のみ</option>
+          <option value="completed" <%= statusFilter === "completed" ? "selected" : "" %>>譲渡完了のみ</option>
+          <option value="all" <%= statusFilter === "all" ? "selected" : "" %>>取り消し済み以外をすべて表示</option>
+        </select>
+
+        <button type="submit">検索</button>
+        <a class="button-link secondary" href="/">条件をリセット</a>
+      </form>
+
+      <div class="result-summary">
+        <strong>現在の検索条件</strong><br>
+        検索キーワード：<%= q || "なし" %><br>
+        表示条件：<%=
+          statusFilter === "open" ? "募集中のみ" :
+          statusFilter === "negotiating" ? "交渉中のみ" :
+          statusFilter === "completed" ? "譲渡完了のみ" :
+          "取り消し済み以外をすべて表示"
+        %><br>
+        検索結果：<%= items.length %>件
+      </div>
+    </section>
+
+    <% if (currentAccount) { %>
+      <section class="card">
+        <div class="top-row">
+          <div>
+            <h2>ログイン中</h2>
+            <p><strong><%= currentAccount.accountName %></strong>（<%= currentAccount.email %>）</p>
+          </div>
+          <div class="page-links">
+            <a class="button-link" href="/items/new">教科書を出品する</a>
+            <a class="button-link secondary" href="/mypage">マイページを見る</a>
+          </div>
+        </div>
+      </section>
+    <% } else { %>
+      <section class="card">
+        <h2>ログインして利用する</h2>
+        <p>出品やチャットを行うには、名前とメールアドレスでログインしてください。新規アカウント作成には @keio.jp のメールアドレスが必要です。</p>
+        <a class="button-link" href="/login">ログイン・新規アカウント作成</a>
+      </section>
+    <% } %>
+
+    <section class="card">
+      <h2>譲渡品一覧</h2>
+
+      <% if (items.length === 0) { %>
+        <div class="empty-state">
+          <strong>該当する譲渡品はありません。</strong>
+          <p>別の教科書名・教科名で検索するか、表示する出品状態を変更してください。</p>
+          <% if (currentAccount) { %>
+            <a class="button-link small-button" href="/items/new">自分で教科書を出品する</a>
+          <% } else { %>
+            <a class="button-link small-button" href="/login">ログインして出品・チャットする</a>
+          <% } %>
+        </div>
+      <% } %>
+
+      <% items.forEach(item => { %>
+        <% const courseNames = item.textbook.textbookCourses.map(tc => tc.course.courseName).join("、") || "未登録"; %>
+        <div class="item-card">
+          <h3><%= item.textbook.title %></h3>
+          <p><span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span></p>
+          <p class="meta">
+            著者：<%= item.textbook.author %><br>
+            関連教科：<%= courseNames %><br>
+            出品者：<%= item.seller.accountName %><br>
+            状態：<%= item.condition %><br>
+            <% if (item.conditionNote) { %>
+              補足：<%= item.conditionNote %><br>
+            <% } %>
+            登録日：<%= formatDate(item.createdAt) %>
+            <% if (item.completedAt) { %>
+              <br>譲渡完了日：<%= formatDate(item.completedAt) %>
+            <% } %>
+          </p>
+          <a class="button-link small-button" href="/items/<%= item.id %>">詳細・チャットを見る</a>
+        </div>
+      <% }) %>
+    </section>
+  </main>
+</body>
+</html>

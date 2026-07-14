@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "ページが見つかりません" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+
+  <main>
+    <section class="card" style="max-width:760px; margin:54px auto; text-align:center;">
+      <div class="detail-book-cover" aria-hidden="true"><img src="/images/book-placeholder.svg" alt=""></div>
+      <p class="hero-eyebrow" style="background:var(--blue-50);color:var(--blue-600);border-color:var(--blue-100);">404 Not Found</p>
+      <h1>ページが見つかりません</h1>
+      <p>指定されたページは存在しないか、URLが変更された可能性があります。</p>
+      <p class="meta">リクエストされたパス：<%= requestedPath %></p>
+      <div class="button-row" style="justify-content:center;margin-top:20px;">
+        <a class="button-link primary" href="/">教科書を探す</a>
+        <% if (currentAccount) { %><a class="button-link secondary" href="/mypage">マイページへ</a><% } else { %><a class="button-link secondary" href="/login">ログインへ</a><% } %>
+      </div>
+    </section>
+  </main>
+
+  <%- include("partials/footer") %>
+</body>
+</html>

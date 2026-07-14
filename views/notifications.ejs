@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "通知" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+
+  <main>
+    <div class="page-header notification-page-header">
+      <div>
+        <h1>通知</h1>
+        <p>保存した検索の新着、お気に入りの状態変更、チャットの更新を確認できます。</p>
+      </div>
+      <% if (notifications.some(notification => !notification.isRead)) { %>
+        <form action="/notifications/read-all" method="post">
+          <button class="secondary" type="submit">すべて既読にする</button>
+        </form>
+      <% } %>
+    </div>
+
+    <section class="card">
+      <% if (notifications.length === 0) { %>
+        <div class="empty-state">
+          <strong>通知はまだありません。</strong>
+          <p>検索条件を保存したり、お気に入りやチャットを利用すると、更新がここに表示されます。</p>
+          <a class="button-link primary" href="/">教科書を探す</a>
+        </div>
+      <% } else { %>
+        <div class="notification-list">
+          <% notifications.forEach(notification => { %>
+            <% const icon = notification.type === 'saved_search' ? '⌕' : notification.type === 'chat' ? '💬' : '♥'; %>
+            <a class="notification-card <%= notification.isRead ? '' : 'unread' %>" href="/notifications/<%= notification.id %>/open">
+              <span class="notification-icon" aria-hidden="true"><%= icon %></span>
+              <span class="notification-content">
+                <span class="button-row">
+                  <strong><%= notification.message %></strong>
+                  <% if (!notification.isRead) { %><span class="status update-status">未読</span><% } %>
+                </span>
+                <% if (notification.savedSearch) { %><small>保存した検索：<%= notification.savedSearch.name %></small><% } %>
+                <% if (notification.item) { %><small>教科書：<%= notification.item.textbook.title %></small><% } %>
+                <small><%= formatDate(notification.createdAt) %></small>
+              </span>
+              <span class="thread-arrow" aria-hidden="true">›</span>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  </main>
+
+  <%- include("partials/footer") %>
+</body>
+</html>

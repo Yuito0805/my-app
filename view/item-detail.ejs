@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "譲渡品詳細・チャット" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount }) %>
+
+  <main>
+    <%- include("partials/messages", { notice, error }) %>
+
+    <% const courseNames = item.textbook.textbookCourses.map(tc => tc.course.courseName).join("、") || "未登録"; %>
+    <% const receiverCandidateIds = new Set(); %>
+    <% const receiverCandidates = []; %>
+    <% item.chatMessages.forEach(chat => { %>
+      <% if (chat.senderAccountId !== item.sellerAccountId && !receiverCandidateIds.has(chat.senderAccountId)) { %>
+        <% receiverCandidateIds.add(chat.senderAccountId); %>
+        <% receiverCandidates.push(chat.sender); %>
+      <% } %>
+    <% }) %>
+
+    <section class="card">
+      <h2><%= item.textbook.title %></h2>
+      <p><span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span></p>
+      <p class="meta">
+        著者：<%= item.textbook.author %><br>
+        関連教科：<%= courseNames %><br>
+        出品者：<%= item.seller.accountName %><br>
+        交渉相手：<%= item.receiver ? item.receiver.accountName : "未定" %><br>
+        状態：<%= item.condition %><br>
+        <% if (item.conditionNote) { %>
+          補足：<%= item.conditionNote %><br>
+        <% } %>
+        登録日：<%= formatDate(item.createdAt) %>
+        <% if (item.completedAt) { %>
+          <br>譲渡完了日時：<%= formatDate(item.completedAt) %>
+        <% } %>
+        <% if (item.isCanceled && item.canceledAt) { %>
+          <br>取り消し日時：<%= formatDate(item.canceledAt) %>
+        <% } %>
+      </p>
+
+      <div class="page-links">
+        <a class="button-link secondary" href="/">一覧へ戻る</a>
+        <% if (currentAccount) { %>
+          <a class="button-link secondary" href="/mypage">マイページへ</a>
+        <% } %>
+      </div>
+    </section>
+
+    <% if (currentAccount && item.sellerAccountId === currentAccount.id && !item.isCanceled && !item.completedAt) { %>
+      <section class="card">
+        <h2>出品者用操作</h2>
+        <div class="page-links">
+          <a class="button-link" href="/items/<%= item.id %>/edit">状態・補足を編集する</a>
+        </div>
+
+        <hr>
+        <h3>交渉相手を選択・変更</h3>
+        <p class="meta">チャットに参加した出品者以外の利用者から、交渉相手を選べます。あとから別の人に変更することもできます。</p>
+
+        <% if (receiverCandidates.length === 0) { %>
+          <div class="empty-state"><strong>まだ交渉相手候補がいません。</strong><p>出品者以外の利用者がこの譲渡品にチャットを送ると、ここで交渉相手として選べるようになります。</p></div>
+        <% } else { %>
+          <form action="/items/<%= item.id %>/receiver" method="post" onsubmit="return confirm('交渉相手を更新しますか？');">
+            <label for="receiverAccountId">交渉相手</label>
+            <select id="receiverAccountId" name="receiverAccountId">
+              <option value="">未定に戻す</option>
+              <% receiverCandidates.forEach(candidate => { %>
+                <option value="<%= candidate.id %>" <%= item.receiver && item.receiver.id === candidate.id ? "selected" : "" %>>
+                  <%= candidate.accountName %>（<%= candidate.email %>）
+                </option>
+              <% }) %>
+            </select>
+            <button type="submit">交渉相手を更新</button>
+          </form>
+        <% } %>
+
+        <hr>
+        <h3>譲渡完了・取り消し</h3>
+        <p class="meta">受け渡しが終わったら「譲渡完了」にします。出品自体をやめる場合は「取り消し」を使います。</p>
+        <div class="page-links">
+          <% if (item.receiver) { %>
+            <form action="/items/<%= item.id %>/complete" method="post" onsubmit="return confirm('この出品を譲渡完了にしますか？');">
+              <button class="success" type="submit">譲渡完了にする</button>
+            </form>
+          <% } else { %>
+            <button class="success" type="button" disabled>譲渡完了には交渉相手の選択が必要です</button>
+          <% } %>
+          <form action="/items/<%= item.id %>/cancel" method="post" onsubmit="return confirm('この出品を取り消しますか？');">
+            <button class="danger" type="submit">この出品を取り消す</button>
+          </form>
+        </div>
+      </section>
+    <% } %>
+
+    <section class="card">
+      <h2>チャット</h2>
+      <% if (item.chatMessages.length === 0) { %>
+        <div class="empty-state"><strong>まだメッセージはありません。</strong><p>受け取りを希望する場合は、ログイン後にチャットを送って出品者に相談してください。</p></div>
+      <% } %>
+
+      <% item.chatMessages.forEach(chat => { %>
+        <div class="message">
+          <strong><%= chat.sender.accountName %></strong>
+          <% if (item.receiver && item.receiver.id === chat.sender.id) { %>
+            <span class="status negotiating-status">現在の交渉相手</span>
+          <% } %>
+          <span class="meta"> / <%= formatDate(chat.sentAt) %></span>
+          <p><%= chat.message %></p>
+        </div>
+      <% }) %>
+
+      <% if (item.isCanceled) { %>
+        <p>取り消し済みの出品には、これ以上チャットを送信できません。</p>
+      <% } else if (item.completedAt) { %>
+        <p>譲渡完了済みの出品には、これ以上チャットを送信できません。</p>
+      <% } else if (currentAccount) { %>
+        <form action="/items/<%= item.id %>/messages" method="post">
+          <label for="message">メッセージ</label>
+          <textarea id="message" name="message" placeholder="例：この教科書を受け取りたいです。" required></textarea>
+          <button type="submit">送信</button>
+        </form>
+      <% } else { %>
+        <p>チャットを送るにはログインしてください。</p>
+        <a class="button-link" href="/login">ログインへ</a>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

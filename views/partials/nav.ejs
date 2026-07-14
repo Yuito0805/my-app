@@ -1,0 +1,47 @@
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="/" aria-label="教科書シェア トップページ">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/>
+          <path d="M4 5.5v16M8 7h8M8 11h6"/>
+        </svg>
+      </span>
+      <span>教科書シェア</span>
+    </a>
+
+    <button class="nav-toggle" type="button" data-nav-toggle aria-label="メニューを開閉" aria-expanded="false">
+      <span aria-hidden="true">☰</span>
+    </button>
+
+    <nav class="site-nav-menu" data-nav-menu aria-label="メインナビゲーション">
+      <a class="nav-link <%= currentPath === '/' ? 'active' : '' %>" href="/">教科書を探す</a>
+      <% if (currentAccount) { %>
+        <a class="nav-link <%= currentPath === '/items/new' ? 'active' : '' %>" href="/items/new">出品する</a>
+        <a class="nav-link <%= currentPath === '/mypage' ? 'active' : '' %>" href="/mypage">マイページ</a>
+        <a class="nav-link <%= currentPath === '/courses' ? 'active' : '' %>" href="/courses">履修科目</a>
+        <a class="nav-link <%= currentPath === '/notifications' ? 'active' : '' %>" href="/notifications">
+          通知
+          <% if (unreadCount > 0) { %>
+            <span class="nav-badge" aria-label="未読通知<%= unreadCount %>件"><%= unreadCount > 99 ? '99+' : unreadCount %></span>
+          <% } %>
+        </a>
+        <span class="nav-spacer"></span>
+        <span class="nav-user" title="<%= currentAccount.email %>">
+          <span class="avatar"><%= currentAccount.accountName.slice(0, 1) %></span>
+          <span><%= currentAccount.accountName %></span>
+        </span>
+        <form class="nav-form" action="/logout" method="post"
+          data-confirm
+          data-confirm-title="ログアウトしますか？"
+          data-confirm-message="現在のアカウントからログアウトします。"
+          data-confirm-label="ログアウト">
+          <button class="nav-logout" type="submit">ログアウト</button>
+        </form>
+      <% } else { %>
+        <span class="nav-spacer"></span>
+        <a class="nav-link <%= currentPath === '/login' ? 'active' : '' %>" href="/login">ログイン・新規登録</a>
+      <% } %>
+    </nav>
+  </div>
+</header>

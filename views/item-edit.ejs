@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "出品内容を編集" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+
+  <main>
+    <% const courseNames = item.textbook.textbookCourses.map(tc => `${tc.course.courseName}（${tc.course.teacherName}）`).join("、") || "未登録"; %>
+
+    <div class="page-header">
+      <h1>出品内容を編集</h1>
+      <p>出品ごとの状態と補足説明を変更できます。</p>
+    </div>
+
+    <div class="content-grid">
+      <section class="card">
+        <form action="/items/<%= item.id %>/edit" method="post"
+          data-confirm
+          data-confirm-title="出品情報を更新しますか？"
+          data-confirm-message="選択した状態と補足説明で出品情報を更新します。"
+          data-confirm-label="更新する">
+          <div class="form-section">
+            <div class="form-section-header">
+              <span class="form-section-number">1</span>
+              <div><h2>教科書の状態</h2><p>現在の状態に最も近いものを選択してください。</p></div>
+            </div>
+
+            <fieldset class="form-field">
+              <legend>状態<span class="required">必須</span></legend>
+              <div class="condition-options">
+                <% conditionOptions.forEach((option, index) => { %>
+                  <div class="condition-option">
+                    <input id="condition-<%= index %>" type="radio" name="condition" value="<%= option %>" <%= item.condition === option ? 'checked' : '' %> <%= index === 0 ? 'required' : '' %>>
+                    <label for="condition-<%= index %>"><strong><%= option %></strong></label>
+                  </div>
+                <% }) %>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-header">
+              <span class="form-section-number">2</span>
+              <div><h2>補足説明</h2><p>傷や書き込みの場所などを具体的に説明できます。</p></div>
+            </div>
+            <div class="form-field">
+              <label for="conditionNote">状態の補足説明</label>
+              <textarea id="conditionNote" name="conditionNote" placeholder="例：第3章にだけマーカーがあります。"><%= item.conditionNote || "" %></textarea>
+            </div>
+          </div>
+
+          <div class="button-row" style="justify-content:flex-end; margin-top:22px;">
+            <a class="button-link secondary" href="/items/<%= item.id %>">変更せず戻る</a>
+            <button class="primary" type="submit">変更を保存</button>
+          </div>
+        </form>
+      </section>
+
+      <aside>
+        <section class="card sticky-card">
+          <div class="detail-book-cover" aria-hidden="true"><img src="/images/book-placeholder.svg" alt=""></div>
+          <span class="status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span>
+          <h2 style="margin-top:12px;"><%= item.textbook.title %></h2>
+          <dl class="info-list">
+            <div class="info-row"><dt>著者</dt><dd><%= item.textbook.author %></dd></div>
+            <div class="info-row"><dt>関連教科</dt><dd><%= courseNames %></dd></div>
+            <div class="info-row"><dt>現在の状態</dt><dd><%= item.condition %></dd></div>
+          </dl>
+          <p class="meta">教科書名・著者名・関連教科は他の出品でも共有するマスタ情報のため、この画面では変更しません。</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <%- include("partials/footer") %>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "教科書を出品" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount, currentPath, unreadCount }) %>
+  <%- include("partials/messages", { notice, error }) %>
+
+  <main>
+    <div class="page-header">
+      <h1>教科書を出品する</h1>
+      <p>登録済みの教科書を選ぶか、新しい教科書情報を入力してください。</p>
+    </div>
+
+    <div class="content-grid">
+      <section class="card">
+        <form action="/items" method="post" id="item-form"
+          data-confirm
+          data-confirm-title="この内容で出品しますか？"
+          data-confirm-message="登録内容を確認して教科書を出品します。"
+          data-confirm-label="出品する">
+          <input id="textbookId" type="hidden" name="textbookId" value="">
+
+          <div class="form-section">
+            <div class="form-section-header">
+              <span class="form-section-number">1</span>
+              <div><h2>教科書情報</h2><p>教科書名を入力すると登録済みの候補を検索します。</p></div>
+            </div>
+
+            <div class="form-field">
+              <label for="title">教科書名<span class="required">必須</span></label>
+              <input id="title" type="text" name="title" placeholder="例：Web アプリ制作メモ" autocomplete="off" required>
+              <div id="suggestions" class="suggestions"></div>
+              <div id="fixed-note" class="fixed-note">登録済みの教科書を選択中です。著者名・関連教科・担当教員名は登録済み情報に固定されています。</div>
+              <button id="clear-selected-textbook" class="secondary small-button" type="button" style="display:none; margin-top:10px;">選択を解除して新規入力に戻る</button>
+            </div>
+
+            <div class="form-field">
+              <label for="author">著者名<span class="required">必須</span></label>
+              <input id="author" type="text" name="author" placeholder="例：著者零五" required>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-header">
+              <span class="form-section-number">2</span>
+              <div><h2>関連する授業</h2><p>教科1と担当教員1は必須です。最大3教科まで登録できます。</p></div>
+            </div>
+
+            <% [1, 2, 3].forEach(number => { %>
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="courseName<%= number %>">教科<%= number %><% if (number === 1) { %><span class="required">必須</span><% } %></label>
+                  <input id="courseName<%= number %>" type="text" name="courseName<%= number %>" placeholder="<%= number === 1 ? '例：Web アプリ設計演習' : '任意' %>" <%= number === 1 ? 'required' : '' %>>
+                </div>
+                <div class="form-field">
+                  <label for="teacherName<%= number %>">担当教員<%= number %><% if (number === 1) { %><span class="required">必須</span><% } %></label>
+                  <input id="teacherName<%= number %>" type="text" name="teacherName<%= number %>" placeholder="<%= number === 1 ? '例：教員零六' : '任意' %>" <%= number === 1 ? 'required' : '' %>>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-header">
+              <span class="form-section-number">3</span>
+              <div><h2>教科書の状態</h2><p>最も近い状態を選び、必要に応じて補足してください。</p></div>
+            </div>
+
+            <fieldset class="form-field">
+              <legend>状態<span class="required">必須</span></legend>
+              <div class="condition-options">
+                <% conditionOptions.forEach((option, index) => { %>
+                  <div class="condition-option">
+                    <input id="condition-<%= index %>" type="radio" name="condition" value="<%= option %>" <%= index === 0 ? 'required' : '' %>>
+                    <label for="condition-<%= index %>"><strong><%= option %></strong></label>
+                  </div>
+                <% }) %>
+              </div>
+            </fieldset>
+
+            <div class="form-field">
+              <label for="conditionNote">状態の補足説明</label>
+              <textarea id="conditionNote" name="conditionNote" placeholder="例：第3章にだけマーカーがあります。表紙に少し擦れがありますが、中身は比較的きれいです。"></textarea>
+              <p class="form-help">傷や書き込みの場所など、受け取る人が判断しやすい情報を入力してください。</p>
+            </div>
+          </div>
+
+          <div class="button-row" style="justify-content:flex-end; margin-top:22px;">
+            <a class="button-link secondary" href="/">キャンセル</a>
+            <button class="primary" type="submit">出品内容を確認</button>
+          </div>
+        </form>
+      </section>
+
+      <aside>
+        <section class="card sticky-card">
+          <h2>出品時のポイント</h2>
+          <dl class="info-list">
+            <div class="info-row"><dt>既存教科書</dt><dd>候補を選ぶと登録済み情報が自動入力されます。</dd></div>
+            <div class="info-row"><dt>新規教科書</dt><dd>候補にない場合は、そのまま手入力できます。</dd></div>
+            <div class="info-row"><dt>状態説明</dt><dd>書き込みや傷の位置を具体的に書くと相談が進みやすくなります。</dd></div>
+          </dl>
+          <p class="meta">金銭の支払いや配送を仲介する機能はありません。受け渡し方法はチャットで相談してください。</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script src="/js/textbook-search.js" defer></script>
+  <%- include("partials/footer") %>
+</body>
+</html>

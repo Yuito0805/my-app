@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "ページが見つかりません" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount }) %>
+
+  <main>
+    <%- include("partials/messages", { notice, error }) %>
+
+    <section class="card">
+      <h2>ページが見つかりません</h2>
+      <div class="empty-state">
+        <strong>指定されたページは存在しないか、URLが正しくありません。</strong>
+        <p class="meta">リクエストされたパス：<%= requestedPath %></p>
+        <p>トップページやマイページから、目的の譲渡品を探してください。</p>
+        <div class="page-links">
+          <a class="button-link" href="/">譲渡品を探す</a>
+          <% if (currentAccount) { %>
+            <a class="button-link secondary" href="/mypage">マイページへ</a>
+          <% } else { %>
+            <a class="button-link secondary" href="/login">ログインへ</a>
+          <% } %>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

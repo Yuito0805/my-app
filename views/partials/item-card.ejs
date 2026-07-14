@@ -1,0 +1,68 @@
+<% const courses = item.textbook.textbookCourses.map(tc => tc.course); %>
+<% const isFavorited = favoriteItemIds && favoriteItemIds.includes(item.id); %>
+<% const hasRecommendation = typeof recommendationReason !== 'undefined' && recommendationReason; %>
+<% const reasonList = typeof recommendationReasons !== 'undefined' && recommendationReasons ? recommendationReasons : []; %>
+<% const showFeedback = typeof showRecommendationFeedback !== 'undefined' && showRecommendationFeedback; %>
+<article class="book-card">
+  <div class="book-card-top-actions">
+    <% if (hasRecommendation) { %>
+      <span class="recommendation-reason"><%= recommendationReason %></span>
+    <% } %>
+    <% if (currentAccount && item.sellerAccountId !== currentAccount.id && !item.isCanceled) { %>
+      <form action="/items/<%= item.id %>/favorite" method="post" class="favorite-form">
+        <input type="hidden" name="returnTo" value="<%= currentUrl %>">
+        <button class="favorite-button <%= isFavorited ? 'active' : '' %>" type="submit"
+          aria-label="<%= isFavorited ? 'お気に入りから削除' : 'お気に入りに追加' %>"
+          title="<%= isFavorited ? 'お気に入りから削除' : 'お気に入りに追加' %>">
+          <span aria-hidden="true"><%= isFavorited ? '♥' : '♡' %></span>
+        </button>
+      </form>
+    <% } %>
+  </div>
+
+  <a class="book-card-main" href="/items/<%= item.id %>" aria-label="<%= item.textbook.title %>の詳細を見る">
+    <span class="book-card-status status <%= getItemStatusClass(item) %>"><%= getItemStatusLabel(item) %></span>
+    <div class="book-card-visual" aria-hidden="true">
+      <img src="/images/book-placeholder.svg" alt="">
+    </div>
+    <div class="book-card-body">
+      <h3 class="book-card-title"><%= item.textbook.title %></h3>
+      <p class="book-card-author"><%= item.textbook.author %></p>
+      <div class="tag-list">
+        <% courses.slice(0, 3).forEach(course => { %>
+          <span class="tag"><%= course.courseName %></span>
+        <% }) %>
+        <% if (courses.length > 3) { %><span class="tag">ほか<%= courses.length - 3 %>件</span><% } %>
+      </div>
+      <p class="meta"><strong>状態：</strong><%= item.condition %></p>
+      <% if (item.conditionNote) { %>
+        <p class="meta"><%= item.conditionNote.length > 55 ? item.conditionNote.slice(0, 55) + '…' : item.conditionNote %></p>
+      <% } %>
+      <div class="book-card-footer">
+        <span class="book-card-seller">出品者：<%= item.seller.accountName %></span>
+        <span class="favorite-count" aria-label="お気に入り<%= item._count?.favorites || 0 %>件">♥ <%= item._count?.favorites || 0 %></span>
+      </div>
+    </div>
+  </a>
+
+  <% if (hasRecommendation && reasonList.length > 0) { %>
+    <details class="recommendation-details">
+      <summary>おすすめ理由を見る</summary>
+      <ul>
+        <% reasonList.forEach(reason => { %>
+          <li><span><%= reason.text %></span><strong>+<%= reason.points %></strong></li>
+        <% }) %>
+      </ul>
+      <% if (typeof recommendationScore !== 'undefined') { %>
+        <p class="recommendation-total">合計スコア：<strong><%= recommendationScore %></strong></p>
+      <% } %>
+    </details>
+  <% } %>
+
+  <% if (showFeedback && currentAccount) { %>
+    <form action="/items/<%= item.id %>/recommendation-feedback" method="post" class="recommendation-feedback-form">
+      <input type="hidden" name="returnTo" value="<%= currentUrl %>">
+      <button type="submit" class="text-button">このおすすめに興味なし</button>
+    </form>
+  <% } %>
+</article>

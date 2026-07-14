@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<%- include("partials/head", { title: "教科書を出品" }) %>
+<body>
+  <%- include("partials/nav", { currentAccount }) %>
+
+  <main>
+    <%- include("partials/messages", { notice, error }) %>
+
+    <section class="card">
+      <h2>教科書を出品</h2>
+      <p>
+        教科書名を入力すると、登録済みの教科書候補が表示されます。
+        候補を選ぶと、著者名・関連教科・担当教員名が自動入力され、固定されます。
+      </p>
+
+      <form action="/items" method="post" id="item-form" onsubmit="return confirm('この内容で出品しますか？');">
+        <input id="textbookId" type="hidden" name="textbookId" value="">
+
+        <label for="title">教科書名</label>
+        <input id="title" type="text" name="title" placeholder="例：Web アプリ制作メモ" autocomplete="off" required>
+        <div id="suggestions" class="suggestions"></div>
+        <div id="fixed-note" class="fixed-note">登録済みの教科書情報を選択中です。著者名・関連教科・担当教員名は固定されています。</div>
+        <button id="clear-selected-textbook" class="secondary small-button" type="button" style="display: none;">選択を解除して新しい教科書として入力</button>
+
+        <label for="author">著者名</label>
+        <input id="author" type="text" name="author" placeholder="例：著者零五" required>
+
+        <h3>関連教科</h3>
+        <p class="meta">教科1と担当教員1は必須です。教科2・教科3は任意です。</p>
+
+        <div class="course-grid">
+          <div>
+            <label for="courseName1">教科1</label>
+            <input id="courseName1" type="text" name="courseName1" placeholder="例：Web アプリ設計演習" required>
+          </div>
+          <div>
+            <label for="teacherName1">担当教員1</label>
+            <input id="teacherName1" type="text" name="teacherName1" placeholder="例：教員零六" required>
+          </div>
+        </div>
+
+        <div class="course-grid">
+          <div>
+            <label for="courseName2">教科2</label>
+            <input id="courseName2" type="text" name="courseName2" placeholder="任意">
+          </div>
+          <div>
+            <label for="teacherName2">担当教員2</label>
+            <input id="teacherName2" type="text" name="teacherName2" placeholder="任意">
+          </div>
+        </div>
+
+        <div class="course-grid">
+          <div>
+            <label for="courseName3">教科3</label>
+            <input id="courseName3" type="text" name="courseName3" placeholder="任意">
+          </div>
+          <div>
+            <label for="teacherName3">担当教員3</label>
+            <input id="teacherName3" type="text" name="teacherName3" placeholder="任意">
+          </div>
+        </div>
+
+        <label for="condition">教科書の状態</label>
+        <select id="condition" name="condition" required>
+          <option value="">選択してください</option>
+          <% conditionOptions.forEach(option => { %>
+            <option value="<%= option %>"><%= option %></option>
+          <% }) %>
+        </select>
+
+        <label for="conditionNote">状態の補足説明</label>
+        <textarea id="conditionNote" name="conditionNote" placeholder="例：第3章にだけマーカーがあります。中身は比較的きれいです。"></textarea>
+        <p class="meta">状態は選択式で大まかに示し、補足説明で具体的な傷や書き込みの場所を説明できます。</p>
+
+        <button type="submit">出品する</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const titleInput = document.getElementById("title");
+    const textbookIdInput = document.getElementById("textbookId");
+    const authorInput = document.getElementById("author");
+    const suggestionsBox = document.getElementById("suggestions");
+    const fixedNote = document.getElementById("fixed-note");
+    const clearButton = document.getElementById("clear-selected-textbook");
+    const courseNameInputs = [
+      document.getElementById("courseName1"),
+      document.getElementById("courseName2"),
+      document.getElementById("courseName3"),
+    ];
+    const teacherNameInputs = [
+      document.getElementById("teacherName1"),
+      document.getElementById("teacherName2"),
+      document.getElementById("teacherName3"),
+    ];
+
+    let searchTimer = null;
+
+    function setTextbookFieldsReadonly(isReadonly) {
+      [authorInput, ...courseNameInputs, ...teacherNameInputs].forEach((input) => {
+        if (input) input.readOnly = isReadonly;
+      });
+    }
+
+    function clearCourseFields() {
+      courseNameInputs.forEach((input) => { if (input) input.value = ""; });
+      teacherNameInputs.forEach((input) => { if (input) input.value = ""; });
+    }
+
+    function showSuggestions(textbooks) {
+      if (!suggestionsBox) return;
+
+      suggestionsBox.innerHTML = "";
+
+      if (textbooks.length === 0) {
+        suggestionsBox.innerHTML = '<p class="meta">候補はありません。新しい教科書として入力してください。</p>';
+        suggestionsBox.style.display = "block";
+        return;
+      }
+
+      textbooks.forEach((textbook) => {
+        const item = document.createElement("div");
+        item.className = "suggestion-item";
+
+        const courseText = textbook.courses.length > 0
+          ? textbook.courses.map((course) => `${course.courseName}（${course.teacherName}）`).join("、")
+          : "関連教科なし";
+
+        item.innerHTML = `
+          <strong>${textbook.title}</strong><br>
+          <span class="meta">著者：${textbook.author}<br>関連教科：${courseText}</span><br>
+        `;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "small-button";
+        button.textContent = "この教科書を使う";
+        button.addEventListener("click", () => selectTextbook(textbook));
+
+        item.appendChild(button);
+        suggestionsBox.appendChild(item);
+      });
+
+      suggestionsBox.style.display = "block";
+    }
+
+    function selectTextbook(textbook) {
+      textbookIdInput.value = textbook.id;
+      titleInput.value = textbook.title;
+      authorInput.value = textbook.author;
+      clearCourseFields();
+
+      textbook.courses.slice(0, 3).forEach((course, index) => {
+        courseNameInputs[index].value = course.courseName;
+        teacherNameInputs[index].value = course.teacherName;
+      });
+
+      setTextbookFieldsReadonly(true);
+      suggestionsBox.style.display = "none";
+      fixedNote.style.display = "block";
+      clearButton.style.display = "inline-block";
+    }
+
+    function clearSelectedTextbook(options = {}) {
+      const shouldClearAutoFields = Boolean(options.clearAutoFields);
+      const shouldClearTitle = Boolean(options.clearTitle);
+
+      if (shouldClearTitle && titleInput) {
+        titleInput.value = "";
+      }
+
+      if (shouldClearAutoFields) {
+        if (authorInput) authorInput.value = "";
+        clearCourseFields();
+      }
+
+      if (textbookIdInput) textbookIdInput.value = "";
+      setTextbookFieldsReadonly(false);
+      fixedNote.style.display = "none";
+      clearButton.style.display = "none";
+    }
+
+    if (titleInput) {
+      titleInput.addEventListener("input", () => {
+        const wasSelectedTextbook = Boolean(textbookIdInput && textbookIdInput.value);
+        clearSelectedTextbook({ clearAutoFields: wasSelectedTextbook });
+        const q = titleInput.value.trim();
+
+        if (searchTimer) clearTimeout(searchTimer);
+
+        if (!q) {
+          suggestionsBox.style.display = "none";
+          suggestionsBox.innerHTML = "";
+          return;
+        }
+
+        searchTimer = setTimeout(async () => {
+          try {
+            const response = await fetch(`/api/textbooks?q=${encodeURIComponent(q)}`);
+            const textbooks = await response.json();
+            showSuggestions(textbooks);
+          } catch (error) {
+            console.error(error);
+          }
+        }, 250);
+      });
+    }
+
+    if (clearButton) {
+      clearButton.addEventListener("click", () => {
+        clearSelectedTextbook({ clearAutoFields: true, clearTitle: true });
+        titleInput.focus();
+      });
+    }
+  </script>
+</body>
+</html>
