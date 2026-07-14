@@ -19,7 +19,6 @@
       <% if (currentAccount) { %>
         <a class="nav-link <%= currentPath === '/items/new' ? 'active' : '' %>" href="/items/new">出品する</a>
         <a class="nav-link <%= currentPath === '/mypage' ? 'active' : '' %>" href="/mypage">マイページ</a>
-        <a class="nav-link <%= currentPath === '/courses' ? 'active' : '' %>" href="/courses">履修科目</a>
         <a class="nav-link <%= currentPath === '/notifications' ? 'active' : '' %>" href="/notifications">
           通知
           <% if (unreadCount > 0) { %>
@@ -27,7 +26,7 @@
           <% } %>
         </a>
         <span class="nav-spacer"></span>
-        <span class="nav-user" title="<%= currentAccount.email %>">
+        <span class="nav-user" title="デモアカウント">
           <span class="avatar"><%= currentAccount.accountName.slice(0, 1) %></span>
           <span><%= currentAccount.accountName %></span>
         </span>
@@ -45,3 +44,8 @@
     </nav>
   </div>
 </header>
+
+<div class="demo-disclosure" role="note">
+  <span class="demo-disclosure-badge">DEMO</span>
+  <span>授業課題用の公開デモです。掲載している利用者・教科書・教科・教員・会話はすべて架空です。実在する個人情報や授業情報は入力しないでください。</span>
+</div>

@@ -9,7 +9,7 @@ function item(id: number, textbookId: number, courseId: number, createdAt = "202
     createdAt,
     _count: { favorites: 0 },
     textbook: {
-      textbookCourses: [{ course: { id: courseId, teacherName: `教員${courseId}` } }],
+      textbookCourses: [{ course: { id: courseId, teacherName: `デモ教員${courseId}` } }],
     },
   };
 }
@@ -32,6 +32,7 @@ test("同じ教科書は再順位付けで1件までになる", () => {
   ], 3);
   assert.equal(ranked.filter((candidate) => candidate.textbookId === 10).length, 1);
 });
+
 
 test("履修中の教科に関連する商品は推薦スコアが加算される", () => {
   const scored = scoreRecommendationCandidates([item(1, 1, 42), item(2, 2, 7)], {

@@ -42,9 +42,6 @@ model Course {
   teacherName     String           @map("teacher_name")
   textbookCourses TextbookCourse[]
   enrolledAccounts AccountCourse[]
-  faculty          String?          @map("faculty")
-  term             String?          @map("term")
-  campus           String?          @map("campus")
 
   @@unique([courseName, teacherName])
   @@map("courses")

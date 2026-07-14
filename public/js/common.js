@@ -73,13 +73,8 @@
       const active = button.dataset.tabTarget === target;
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
-      button.tabIndex = active ? 0 : -1;
     });
-    tabPanels.forEach((panel) => {
-      const active = panel.dataset.tabPanel === target;
-      panel.classList.toggle("active", active);
-      panel.hidden = !active;
-    });
+    tabPanels.forEach((panel) => panel.classList.toggle("active", panel.dataset.tabPanel === target));
   };
 
   if (tabButtons.length > 0) {
@@ -90,7 +85,7 @@
       : tabButtons[0].dataset.tabTarget;
     activateTab(validInitial);
 
-    tabButtons.forEach((button, index) => {
+    tabButtons.forEach((button) => {
       button.addEventListener("click", () => {
         const target = button.dataset.tabTarget;
         activateTab(target);
@@ -99,46 +94,40 @@
         url.hash = "";
         history.replaceState(null, "", url);
       });
-      button.addEventListener("keydown", (event) => {
-        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-        event.preventDefault();
-        let nextIndex = index;
-        if (event.key === "ArrowRight") nextIndex = (index + 1) % tabButtons.length;
-        if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabButtons.length) % tabButtons.length;
-        if (event.key === "Home") nextIndex = 0;
-        if (event.key === "End") nextIndex = tabButtons.length - 1;
-        tabButtons[nextIndex].focus();
-        tabButtons[nextIndex].click();
-      });
     });
   }
+
+
+  document.querySelectorAll("[data-demo-login]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nameInput = document.querySelector("#login-name");
+      const emailInput = document.querySelector("#login-email");
+      if (!(nameInput instanceof HTMLInputElement) || !(emailInput instanceof HTMLInputElement)) return;
+      nameInput.value = button.dataset.demoName || "";
+      emailInput.value = button.dataset.demoEmail || "";
+      nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+      emailInput.dispatchEvent(new Event("input", { bubbles: true }));
+      emailInput.focus();
+    });
+  });
 
   const chatMessages = document.querySelector("[data-chat-messages]");
   if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
 })();
 
 (() => {
-  const searchForm = document.querySelector("[data-search-form]");
-  if (searchForm) {
-    searchForm.addEventListener("submit", () => {
-      searchForm.classList.add("is-submitting");
-      const button = searchForm.querySelector(".search-button");
-      if (button) {
-        button.disabled = true;
-        button.textContent = "検索中…";
-      }
-    });
-  }
-
-  document.querySelectorAll(".favorite-form").forEach((form) => {
-    form.addEventListener("submit", () => {
-      form.querySelector(".favorite-button")?.classList.add("is-pulsing");
-    });
+  const tabList = document.querySelector('[role="tablist"]');
+  if (!tabList) return;
+  const tabs = [...tabList.querySelectorAll('[role="tab"]')];
+  tabList.addEventListener("keydown", (event) => {
+    const index = tabs.indexOf(document.activeElement);
+    if (index < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const nextIndex = event.key === "Home" ? 0
+      : event.key === "End" ? tabs.length - 1
+      : event.key === "ArrowRight" ? (index + 1) % tabs.length
+      : (index - 1 + tabs.length) % tabs.length;
+    tabs[nextIndex]?.focus();
+    tabs[nextIndex]?.click();
   });
-
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/service-worker.js").catch(() => {});
-    });
-  }
 })();

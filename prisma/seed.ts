@@ -22,281 +22,361 @@ const daysAgo = (days: number, hour = 12) => {
 };
 const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);
 
-async function mapBatches<T, R>(values: T[], size: number, fn: (value: T, index: number) => Promise<R>) {
-  const results: R[] = [];
-  for (let start = 0; start < values.length; start += size) {
-    const batch = values.slice(start, start + size);
-    results.push(...await Promise.all(batch.map((value, index) => fn(value, start + index))));
-  }
+async function mapLimit<T, R>(values: T[], limit: number, worker: (value: T, index: number) => Promise<R>) {
+  const results = new Array<R>(values.length);
+  let cursor = 0;
+  const runners = Array.from({ length: Math.min(limit, values.length) }, async () => {
+    while (cursor < values.length) {
+      const index = cursor++;
+      results[index] = await worker(values[index], index);
+    }
+  });
+  await Promise.all(runners);
   return results;
 }
 
-type CourseSeed = {
-  courseName: string;
-  teacherName: string;
-  faculty: string;
-  term: string;
-  campus: string;
-};
-type BookSeed = {
-  key: string;
-  title: string;
-  author: string;
-  courses: CourseSeed[];
-};
+async function stage<T>(name: string, task: () => Promise<T>) {
+  const started = Date.now();
+  console.log(`[seed] ${name} を開始...`);
+  const result = await task();
+  console.log(`[seed] ${name} が完了 (${((Date.now() - started) / 1000).toFixed(1)}秒)`);
+  return result;
+}
 
-const course = (
-  courseName: string,
-  teacherName: string,
-  faculty = "理工学部",
-  term = "春学期",
-  campus = "矢上",
-): CourseSeed => ({ courseName, teacherName, faculty, term, campus });
+const accountSeeds = Array.from({ length: 24 }, (_, index) => {
+  const number = String(index + 1).padStart(2, "0");
+  const group = String.fromCharCode(65 + Math.floor(index / 8));
+  return {
+    accountName: `デモ利用者${group}${number}`,
+    email: `webpro-demo-${group.toLowerCase()}${number}@keio.jp`,
+  };
+});
+
+type BookSeed = { key: string; title: string; author: string; courses: [string, string][] };
+const bookSeeds: BookSeed[] = [
+  { key: "a01", title: "蒼海情報構造ノート", author: "デモ著者A01", courses: [["蒼海情報構造演習", "デモ教員A01"], ["蒼海データ表現論", "デモ教員A02"]] },
+  { key: "a02", title: "星環計算モデル入門", author: "デモ著者A02", courses: [["星環計算モデル論", "デモ教員A03"]] },
+  { key: "a03", title: "白樺分散設計ワークブック", author: "デモ著者A03", courses: [["白樺分散設計", "デモ教員A04"], ["白樺サービス構成法", "デモ教員A05"]] },
+  { key: "a04", title: "月影データ表現の基礎", author: "デモ著者A04", courses: [["月影データ表現法", "デモ教員A06"]] },
+  { key: "a05", title: "翠嶺対話設計ガイド", author: "デモ著者A05", courses: [["翠嶺インタラクション研究", "デモ教員A07"]] },
+  { key: "a06", title: "紅葉ネットワーク構成演習", author: "デモ著者A06", courses: [["紅葉ネットワーク構成", "デモ教員A08"], ["紅葉通信設計論", "デモ教員A09"]] },
+  { key: "a07", title: "風紋アルゴリズム工房", author: "デモ著者A07", courses: [["風紋アルゴリズム工房", "デモ教員A10"]] },
+  { key: "a08", title: "雪原数理モデリング帖", author: "デモ著者A08", courses: [["雪原数理モデリング", "デモ教員A11"]] },
+  { key: "a09", title: "黄昏メディア設計読本", author: "デモ著者A09", courses: [["黄昏メディア設計", "デモ教員A12"]] },
+  { key: "a10", title: "水鏡知能処理ノート", author: "デモ著者A10", courses: [["水鏡知能処理", "デモ教員B01"], ["水鏡推論構成法", "デモ教員B02"]] },
+  { key: "a11", title: "桜雲ソフトウェア構築演習", author: "デモ著者A11", courses: [["桜雲ソフトウェア構築", "デモ教員B03"]] },
+  { key: "a12", title: "紫苑クラウド基礎案内", author: "デモ著者A12", courses: [["紫苑クラウド基礎", "デモ教員B04"]] },
+  { key: "a13", title: "青嵐信号解析演習帳", author: "デモ著者A13", courses: [["青嵐信号解析", "デモ教員B05"], ["青嵐波形観測論", "デモ教員B06"]] },
+  { key: "a14", title: "銀河システム検証入門", author: "デモ著者A14", courses: [["銀河システム検証", "デモ教員B07"]] },
+  { key: "a15", title: "朝霧情報倫理ケース集", author: "デモ著者A15", courses: [["朝霧情報倫理", "デモ教員B08"]] },
+  { key: "a16", title: "夕凪設計パターン集", author: "デモ著者A16", courses: [["夕凪設計パターン論", "デモ教員B09"]] },
+  { key: "a17", title: "天穹データ探索ハンドブック", author: "デモ著者A17", courses: [["天穹データ探索", "デモ教員B10"], ["天穹検索構成演習", "デモ教員B11"]] },
+  { key: "a18", title: "深緑可視化デザイン", author: "デモ著者A18", courses: [["深緑情報可視化", "デモ教員B12"]] },
+  { key: "a19", title: "金砂プロセス設計演習", author: "デモ著者A19", courses: [["金砂プロセス設計", "デモ教員C01"]] },
+  { key: "a20", title: "藍晶計算基盤のしくみ", author: "デモ著者A20", courses: [["藍晶計算基盤論", "デモ教員C02"]] },
+  { key: "b01", title: "琥珀データ連携ノート", author: "デモ著者B01", courses: [["琥珀データ連携演習", "デモ教員C03"]] },
+  { key: "b02", title: "霧島状態機械ワーク", author: "デモ著者B02", courses: [["霧島状態機械論", "デモ教員C04"]] },
+  { key: "b03", title: "若草ユーザー体験設計", author: "デモ著者B03", courses: [["若草体験設計演習", "デモ教員C05"]] },
+  { key: "b04", title: "群青並行処理入門", author: "デモ著者B04", courses: [["群青並行処理論", "デモ教員C06"]] },
+  { key: "b05", title: "花霞情報検索演習", author: "デモ著者B05", courses: [["花霞情報検索", "デモ教員C07"]] },
+  { key: "b06", title: "流星コンポーネント設計", author: "デモ著者B06", courses: [["流星部品設計論", "デモ教員C08"]] },
+  { key: "b07", title: "碧空データ品質ガイド", author: "デモ著者B07", courses: [["碧空データ品質演習", "デモ教員C09"]] },
+  { key: "b08", title: "藤波言語処理の基礎", author: "デモ著者B08", courses: [["藤波言語処理論", "デモ教員C10"]] },
+  { key: "b09", title: "陽炎モデル検査ノート", author: "デモ著者B09", courses: [["陽炎モデル検査", "デモ教員C11"]] },
+  { key: "b10", title: "水脈ストレージ設計", author: "デモ著者B10", courses: [["水脈記憶構成論", "デモ教員C12"]] },
+  { key: "b11", title: "雲海イベント処理演習", author: "デモ著者B11", courses: [["雲海イベント処理", "デモ教員D01"]] },
+  { key: "b12", title: "灯台サービス観測入門", author: "デモ著者B12", courses: [["灯台サービス観測", "デモ教員D02"]] },
+  { key: "b13", title: "森羅特徴量設計ノート", author: "デモ著者B13", courses: [["森羅特徴量設計", "デモ教員D03"]] },
+  { key: "b14", title: "真珠レコメンド構成法", author: "デモ著者B14", courses: [["真珠推薦構成演習", "デモ教員D04"]] },
+  { key: "b15", title: "青磁フロント設計読本", author: "デモ著者B15", courses: [["青磁画面構成論", "デモ教員D05"]] },
+  { key: "b16", title: "薄明バックエンド実践", author: "デモ著者B16", courses: [["薄明処理層設計", "デモ教員D06"]] },
+  { key: "b17", title: "千鳥テスト設計演習", author: "デモ著者B17", courses: [["千鳥検証設計論", "デモ教員D07"]] },
+  { key: "b18", title: "虹彩アクセシビリティ入門", author: "デモ著者B18", courses: [["虹彩利用支援設計", "デモ教員D08"]] },
+  { key: "b19", title: "木漏日性能改善ノート", author: "デモ著者B19", courses: [["木漏日性能設計", "デモ教員D09"]] },
+  { key: "b20", title: "星霜サービス企画演習", author: "デモ著者B20", courses: [["星霜サービス企画", "デモ教員D10"], ["星霜要求整理法", "デモ教員D11"]] },
+];
+
+const conditions = ["新品に近い", "比較的きれい", "書き込み少しあり", "書き込みあり", "表紙に傷あり", "角に折れあり", "全体的に使用感あり"];
+const notes = [
+  "デモ用説明：カバーを付けて使用した設定です。",
+  "デモ用説明：一部の章に架空のマーカー跡があります。",
+  "デモ用説明：表紙に軽い擦れがある設定です。",
+  "デモ用説明：章末問題に鉛筆の印がある設定です。",
+  "デモ用説明：使用回数が少ない想定の出品です。",
+  "デモ用説明：背表紙に軽い日焼けがある設定です。",
+  "デモ用説明：付箋を貼っていた跡がある設定です。",
+  "デモ用説明：架空の付属資料が揃っている設定です。",
+];
+
+const itemSeedKey = (number: number) => `fictional-item-${String(number).padStart(3, "0")}`;
+const chatSeedKey = (number: number) => `fictional-chat-${String(number).padStart(3, "0")}`;
 
 async function main() {
-  console.log("[1/10] アカウントを登録しています...");
-  const accountSeeds = [
-    ["利用者零一", "user01@keio.jp"], ["利用者零二", "user02@keio.jp"],
-    ["利用者零三", "user03@keio.jp"], ["利用者零四", "user04@keio.jp"],
-    ["利用者零五", "user05@keio.jp"], ["佐藤葵", "aoi.sato@keio.jp"],
-    ["鈴木蓮", "ren.suzuki@keio.jp"], ["高橋凛", "rin.takahashi@keio.jp"],
-    ["田中悠真", "yuma.tanaka@keio.jp"], ["伊藤美咲", "misaki.ito@keio.jp"],
-    ["山本颯太", "sota.yamamoto@keio.jp"], ["小林結衣", "yui.kobayashi@keio.jp"],
-    ["加藤陽菜", "hina.kato@keio.jp"], ["吉田湊", "minato.yoshida@keio.jp"],
-    ["山田紬", "tsumugi.yamada@keio.jp"], ["松本樹", "itsuki.matsumoto@keio.jp"],
-    ["井上澪", "mio.inoue@keio.jp"], ["木村蒼", "ao.kimura@keio.jp"],
-    ["林咲良", "sakura.hayashi@keio.jp"], ["清水陸", "riku.shimizu@keio.jp"],
-    ["阿部琴音", "kotone.abe@keio.jp"], ["森大和", "yamato.mori@keio.jp"],
-    ["池田楓", "kaede.ikeda@keio.jp"], ["橋本直", "nao.hashimoto@keio.jp"],
-  ].map(([accountName, email]) => ({ accountName, email }));
+  const accountsByEmail = new Map<string, any>();
+  const textbooksByKey = new Map<string, any>();
+  const coursesByComposite = new Map<string, any>();
+  const itemsByNumber = new Map<number, any>();
 
-  const accountRows = await mapBatches(accountSeeds, 8, (account) => prisma.account.upsert({
-    where: { email: account.email },
-    update: { accountName: account.accountName },
-    create: account,
-  }));
-  const accountsByEmail = new Map(accountRows.map((row: any) => [row.email, row]));
-
-  const bookSeeds: BookSeed[] = [
-    { key: "db-design", title: "関係データベース設計", author: "青木誠", courses: [course("データモデリング", "石井教授"), course("データベース論", "加藤教授", "理工学部", "秋学期")] },
-    { key: "db-practice", title: "データモデリング実践", author: "青木誠", courses: [course("データモデリング", "石井教授"), course("情報システム設計", "石井教授", "理工学部", "秋学期")] },
-    { key: "python", title: "Pythonプログラミング基礎", author: "中村翔", courses: [course("プログラミング基礎", "田辺准教授", "理工学部", "春学期", "日吉"), course("実践のためのWebプログラミング", "藤井講師")] },
-    { key: "web", title: "Webアプリケーション開発", author: "井上優", courses: [course("実践のためのWebプログラミング", "藤井講師"), course("Webシステム設計", "藤井講師", "理工学部", "秋学期")] },
-    { key: "typescript", title: "TypeScript実践ガイド", author: "杉山航", courses: [course("実践のためのWebプログラミング", "藤井講師"), course("ソフトウェア設計演習", "山田教授", "理工学部", "秋学期")] },
-    { key: "algo", title: "アルゴリズムとデータ構造", author: "松本健", courses: [course("アルゴリズム第2", "岡田教授"), course("計算機科学基礎", "岡田教授", "理工学部", "春学期", "日吉")] },
-    { key: "discrete", title: "離散数学入門", author: "奥村司", courses: [course("離散数学", "岡田教授", "理工学部", "春学期", "日吉"), course("計算機科学基礎", "岡田教授", "理工学部", "春学期", "日吉")] },
-    { key: "java", title: "Javaオブジェクト指向演習", author: "森田亮", courses: [course("プログラミング第二同演習", "山田教授"), course("ソフトウェア設計演習", "山田教授", "理工学部", "秋学期")] },
-    { key: "cpp", title: "C++標準ライブラリ入門", author: "村井亮介", courses: [course("プログラミング第二同演習", "山田教授"), course("ゲームプログラミング", "森講師", "環境情報学部", "秋学期", "湘南藤沢")] },
-    { key: "c", title: "C言語プログラミング", author: "吉田剛", courses: [course("プログラミング第一", "山田教授", "理工学部", "春学期", "日吉"), course("情報工学実験", "中島准教授")] },
-    { key: "network", title: "コンピュータネットワーク入門", author: "斎藤直樹", courses: [course("コンピュータネットワーク", "林教授"), course("通信ネットワーク論", "林教授", "理工学部", "秋学期")] },
-    { key: "security", title: "情報セキュリティ基礎", author: "竹内真", courses: [course("情報セキュリティ", "石田教授"), course("ネットワークセキュリティ", "石田教授", "理工学部", "秋学期")] },
-    { key: "os", title: "オペレーティングシステム概論", author: "西村悟", courses: [course("オペレーティングシステム", "山口教授"), course("システムプログラミング", "山口教授", "理工学部", "秋学期")] },
-    { key: "architecture", title: "コンピュータアーキテクチャ", author: "安藤拓", courses: [course("コンピュータアーキテクチャ", "山口教授"), course("計算機工学", "中島准教授", "理工学部", "春学期")] },
-    { key: "embedded", title: "組込みシステム設計", author: "上田隆", courses: [course("組込みシステム", "中島准教授"), course("情報工学実験", "中島准教授")] },
-    { key: "dsp", title: "ディジタル信号処理", author: "清水浩", courses: [course("ディジタル信号処理", "渡辺教授"), course("音響信号処理", "渡辺教授", "理工学部", "秋学期")] },
-    { key: "image", title: "画像処理の基礎", author: "前田修", courses: [course("画像処理", "前田教授"), course("ビジュアルコンピューティングⅠB", "前田教授")] },
-    { key: "cg", title: "コンピュータグラフィックス", author: "平野修", courses: [course("ビジュアルコンピューティングⅠB", "前田教授"), course("コンピュータグラフィックス", "前田教授", "理工学部", "秋学期")] },
-    { key: "hi", title: "ヒューマンインタフェース設計", author: "大野彩", courses: [course("ヒューマンインタフェース", "佐々木教授"), course("ユーザエクスペリエンス設計", "佐々木教授", "環境情報学部", "秋学期", "湘南藤沢")] },
-    { key: "ar", title: "AR・VRシステム入門", author: "高野薫", courses: [course("拡張現実システム", "佐々木教授", "理工学部", "秋学期"), course("ヒューマンインタフェース", "佐々木教授")] },
-    { key: "ai", title: "人工知能の基礎", author: "村上瞳", courses: [course("人工知能", "福田教授"), course("機械学習", "福田教授", "理工学部", "秋学期")] },
-    { key: "ml", title: "機械学習パターン認識", author: "福田篤", courses: [course("機械学習", "福田教授", "理工学部", "秋学期"), course("データサイエンス演習", "木村教授", "理工学部", "秋学期")] },
-    { key: "data-science", title: "データサイエンス入門", author: "木村誠", courses: [course("データ解析", "木村教授"), course("データサイエンス演習", "木村教授", "理工学部", "秋学期")] },
-    { key: "stats", title: "確率統計入門", author: "橋本望", courses: [course("確率統計", "木村教授", "理工学部", "春学期", "日吉"), course("データ解析", "木村教授")] },
-    { key: "linear", title: "線形代数とその応用", author: "藤田恵", courses: [course("線形代数", "小川教授", "理工学部", "春学期", "日吉"), course("数理工学", "小川教授")] },
-    { key: "calculus", title: "微分積分学演習", author: "小川実", courses: [course("微分積分", "小川教授", "理工学部", "春学期", "日吉"), course("数理工学", "小川教授")] },
-    { key: "optimization", title: "数理最適化", author: "佐伯徹", courses: [course("オペレーションズリサーチ", "佐伯教授"), course("数理工学", "小川教授")] },
-    { key: "quantum", title: "量子コンピューティング入門", author: "川村智", courses: [course("量子コンピューティングⅠB", "吉川教授"), course("量子情報科学", "吉川教授", "理工学部", "秋学期")] },
-    { key: "physics", title: "物理学基礎", author: "吉川健", courses: [course("物理学A", "吉川教授", "理工学部", "春学期", "日吉"), course("量子情報科学", "吉川教授", "理工学部", "秋学期")] },
-    { key: "comm", title: "通信理論", author: "長谷川淳", courses: [course("通信理論", "長谷川教授"), course("情報理論", "長谷川教授", "理工学部", "秋学期")] },
-    { key: "wireless", title: "無線通信システム", author: "林直人", courses: [course("無線通信", "林教授", "理工学部", "秋学期"), course("通信ネットワーク論", "林教授", "理工学部", "秋学期")] },
-    { key: "se", title: "ソフトウェア工学", author: "近藤学", courses: [course("ソフトウェア工学", "山田教授"), course("システム設計論", "山田教授", "理工学部", "秋学期")] },
-    { key: "testing", title: "ソフトウェアテスト技法", author: "山田浩", courses: [course("ソフトウェア工学", "山田教授"), course("品質保証演習", "近藤講師", "理工学部", "秋学期")] },
-    { key: "project", title: "プロジェクトマネジメント", author: "近藤学", courses: [course("プロジェクトマネジメント", "近藤講師", "理工学部", "秋学期"), course("システム設計論", "山田教授", "理工学部", "秋学期")] },
-    { key: "economics", title: "経済学入門", author: "遠藤真", courses: [course("経済学基礎", "遠藤教授", "経済学部", "春学期", "日吉"), course("ミクロ経済学", "遠藤教授", "経済学部", "秋学期", "三田")] },
-    { key: "management", title: "経営管理論", author: "井口光", courses: [course("経営管理論", "井口教授", "商学部", "春学期", "三田"), course("組織論", "井口教授", "商学部", "秋学期", "三田")] },
-    { key: "law", title: "情報法概論", author: "佐久間俊", courses: [course("情報法", "佐久間教授", "法学部", "秋学期", "三田"), course("知的財産法", "佐久間教授", "法学部", "春学期", "三田")] },
-    { key: "english", title: "Academic Writing Skills", author: "Emma Brown", courses: [course("英語アカデミックライティング", "Brown講師", "全学部", "春学期", "日吉")] },
-    { key: "design", title: "デザイン思考の実践", author: "大野彩", courses: [course("デザイン思考", "大野教授", "総合政策学部", "春学期", "湘南藤沢"), course("サービスデザイン", "大野教授", "環境情報学部", "秋学期", "湘南藤沢")] },
-    { key: "media", title: "メディア研究入門", author: "森本花", courses: [course("メディア論", "森本教授", "環境情報学部", "春学期", "湘南藤沢"), course("コミュニケーション論", "森本教授", "総合政策学部", "秋学期", "湘南藤沢")] },
-    { key: "bioinfo", title: "バイオインフォマティクス", author: "池田真", courses: [course("バイオインフォマティクス", "池田教授", "理工学部", "秋学期"), course("生命情報科学", "池田教授", "理工学部", "春学期")] },
-    { key: "robotics", title: "ロボティクス基礎", author: "中島徹", courses: [course("ロボティクス", "中島准教授", "理工学部", "秋学期"), course("制御工学", "佐伯教授", "理工学部", "春学期")] },
-  ];
-
-  console.log("[2/10] 教科と教科書を登録しています...");
-  const uniqueCourses = [...new Map(bookSeeds.flatMap((book) => book.courses).map((row) => [`${row.courseName}|${row.teacherName}`, row])).values()];
-  const courseRows = await mapBatches(uniqueCourses, 8, (row) => prisma.course.upsert({
-    where: { courseName_teacherName: { courseName: row.courseName, teacherName: row.teacherName } },
-    update: { faculty: row.faculty, term: row.term, campus: row.campus },
-    create: row,
-  }));
-  const coursesByKey = new Map(courseRows.map((row: any) => [`${row.courseName}|${row.teacherName}`, row]));
-
-  const textbookRows = await mapBatches(bookSeeds, 8, (book) => prisma.textbook.upsert({
-    where: { title_author: { title: book.title, author: book.author } },
-    update: {},
-    create: { title: book.title, author: book.author },
-  }));
-  const textbooksByKey = new Map(bookSeeds.map((book, index) => [book.key, textbookRows[index]]));
-  await prisma.textbookCourse.createMany({
-    data: bookSeeds.flatMap((book) => book.courses.map((row) => ({
-      textbookId: textbooksByKey.get(book.key).id,
-      courseId: coursesByKey.get(`${row.courseName}|${row.teacherName}`).id,
-    }))),
-    skipDuplicates: true,
+  await stage("架空アカウント24件", async () => {
+    const rows = await mapLimit(accountSeeds, 6, async (account) => prisma.account.upsert({
+      where: { email: account.email },
+      update: { accountName: account.accountName },
+      create: account,
+    }));
+    rows.forEach((row, index) => accountsByEmail.set(accountSeeds[index].email, row));
   });
 
-  console.log("[3/10] 多様な出品データを登録しています...");
-  const conditions = ["新品に近い", "比較的きれい", "書き込み少しあり", "書き込みあり", "表紙に傷あり", "角に折れあり", "全体的に使用感あり"];
-  const notes = [
-    "講義で数回使用しました。本文は読みやすい状態です。",
-    "重要箇所に黄色のマーカーが数か所あります。",
-    "表紙にわずかな擦れがありますが、中身はきれいです。",
-    "章末問題に鉛筆の書き込みがあります。消しゴムで消せます。",
-    "カバーを付けて保管していました。付属資料も揃っています。",
-    "持ち運びによる使用感があります。ページの欠損はありません。",
-    "指定版を買い直したため出品します。授業利用には問題ありません。",
-  ];
-  const itemSeeds = bookSeeds.flatMap((book, bookIndex) => [0, 1].map((variant) => {
-    const number = bookIndex * 2 + variant + 1;
-    const seller = accountRows[(bookIndex * 3 + variant * 7) % accountRows.length];
-    const inquirer = accountRows[(bookIndex * 3 + variant * 7 + 5) % accountRows.length];
-    const canceled = number % 19 === 0;
-    const completed = !canceled && number % 13 === 0;
-    const negotiating = !canceled && !completed && number % 5 === 0;
-    return {
-      key: String(number).padStart(3, "0"),
-      seller,
-      receiver: completed || negotiating ? inquirer : null,
-      textbook: textbooksByKey.get(book.key),
-      condition: conditions[(bookIndex + variant * 2) % conditions.length],
-      conditionNote: notes[(bookIndex * 2 + variant) % notes.length],
-      isCanceled: canceled,
-      canceledAt: canceled ? hoursAgo((number % 30) + 2) : null,
-      completedAt: completed ? daysAgo((number % 12) + 1) : null,
-      createdAt: daysAgo((bookIndex * 2 + variant) % 48, 8 + (number % 9)),
-    };
-  }));
+  await stage("架空教科書40冊・架空教科マスタ", async () => {
+    await mapLimit(bookSeeds, 5, async (book) => {
+      const textbook = await prisma.textbook.upsert({
+        where: { title_author: { title: book.title, author: book.author } },
+        update: {},
+        create: { title: book.title, author: book.author },
+      });
+      textbooksByKey.set(book.key, textbook);
 
-  const itemRows = await mapBatches(itemSeeds, 8, (row) => prisma.item.upsert({
-    where: { seedKey: `v11-item-${row.key}` },
-    update: {
-      sellerAccountId: row.seller.id, receiverAccountId: row.receiver?.id || null, textbookId: row.textbook.id,
-      condition: row.condition, conditionNote: row.conditionNote, isCanceled: row.isCanceled,
-      canceledAt: row.canceledAt, completedAt: row.completedAt, createdAt: row.createdAt,
-    },
-    create: {
-      seedKey: `v11-item-${row.key}`, sellerAccountId: row.seller.id, receiverAccountId: row.receiver?.id || null,
-      textbookId: row.textbook.id, condition: row.condition, conditionNote: row.conditionNote,
-      isCanceled: row.isCanceled, canceledAt: row.canceledAt, completedAt: row.completedAt, createdAt: row.createdAt,
-    },
-  }));
-
-  console.log("[4/10] チャット履歴を登録しています...");
-  const chatTemplates = [
-    ["この教科書はまだ受け取り可能でしょうか？", "はい、現在も募集中です。状態について質問があればお答えします。"],
-    ["授業指定の版と同じか確認したいです。", "今年度のシラバスに記載されている版です。"],
-    ["書き込みの場所をもう少し教えてください。", "主に前半の章にマーカーがあります。問題の解答は書いていません。"],
-    ["本文に破れや水濡れはありますか？", "破れや水濡れはありません。表紙に少し使用感があります。"],
-    ["関連する別冊や付属資料もありますか？", "購入時に付属していた資料はすべて揃っています。"],
-  ];
-  const chatSeeds: any[] = [];
-  itemSeeds.forEach((seed, index) => {
-    if (seed.isCanceled || index % 4 === 3) return;
-    const item = itemRows[index];
-    const sender = seed.receiver || accountRows[(index + 9) % accountRows.length];
-    if (sender.id === seed.seller.id) return;
-    const pair = chatTemplates[index % chatTemplates.length];
-    chatSeeds.push({ seedKey: `v11-chat-${seed.key}-a`, itemId: item.id, senderAccountId: sender.id, message: pair[0], sentAt: hoursAgo(4 + index * 3) });
-    chatSeeds.push({ seedKey: `v11-chat-${seed.key}-b`, itemId: item.id, senderAccountId: seed.seller.id, message: pair[1], sentAt: hoursAgo(2 + index * 3) });
-  });
-  await mapBatches(chatSeeds, 10, (row) => prisma.chatMessage.upsert({
-    where: { seedKey: row.seedKey }, update: row, create: row,
-  }));
-
-  console.log("[5/10] 履修科目を登録しています...");
-  const enrollmentData: any[] = [];
-  accountRows.forEach((account: any, accountIndex: number) => {
-    for (let offset = 0; offset < 6; offset += 1) {
-      const selected = courseRows[(accountIndex * 5 + offset * 7) % courseRows.length];
-      enrollmentData.push({ accountId: account.id, courseId: selected.id, createdAt: daysAgo(25 - offset) });
-    }
-  });
-  await prisma.accountCourse.createMany({ data: enrollmentData, skipDuplicates: true });
-
-  console.log("[6/10] お気に入りと閲覧履歴を登録しています...");
-  const favoriteData: any[] = [];
-  const viewData: any[] = [];
-  accountRows.forEach((account: any, accountIndex: number) => {
-    for (let offset = 0; offset < 8; offset += 1) {
-      const item = itemRows[(accountIndex * 7 + offset * 11) % itemRows.length];
-      if (item.sellerAccountId === account.id || item.isCanceled) continue;
-      if (offset < 6) favoriteData.push({ accountId: account.id, itemId: item.id, createdAt: daysAgo(offset + 1, 18) });
-      viewData.push({ accountId: account.id, itemId: item.id, viewedAt: daysAgo(offset % 7, 16), viewCount: 1 + ((accountIndex + offset) % 7) });
-    }
-  });
-  await prisma.favorite.createMany({ data: favoriteData, skipDuplicates: true });
-  await prisma.itemView.createMany({ data: viewData, skipDuplicates: true });
-
-  console.log("[7/10] 保存検索を登録しています...");
-  const searchThemes = [
-    ["Web開発の教科書", "Web", "all"], ["データ系の教科書", "データ", "all"],
-    ["アルゴリズム関連", "アルゴリズム", "all"], ["通信分野", "通信", "all"],
-    ["機械学習", "機械学習", "course"], ["中島先生の授業", "中島", "teacher"],
-    ["比較的きれいな本", "", "all"], ["量子分野", "量子", "all"],
-    ["デザイン関連", "デザイン", "all"], ["統計と解析", "統計", "all"],
-    ["セキュリティ", "セキュリティ", "all"], ["SFCの授業", "湘南藤沢", "all"],
-  ];
-  const savedRows: any[] = [];
-  for (let index = 0; index < searchThemes.length; index += 1) {
-    const [name, keyword, target] = searchThemes[index];
-    const account = accountRows[index];
-    const row = await prisma.savedSearch.upsert({
-      where: { accountId_name: { accountId: account.id, name } },
-      update: { keyword: keyword || null, searchTarget: target, condition: index === 6 ? "比較的きれい" : "all", itemStatus: "open", sortOrder: index % 3 === 0 ? "popular" : "newest", lastCheckedAt: daysAgo(4 + index % 6) },
-      create: { accountId: account.id, name, keyword: keyword || null, searchTarget: target, condition: index === 6 ? "比較的きれい" : "all", itemStatus: "open", sortOrder: index % 3 === 0 ? "popular" : "newest", lastCheckedAt: daysAgo(4 + index % 6) },
+      for (const [courseName, teacherName] of book.courses) {
+        const composite = `${courseName}::${teacherName}`;
+        let course = coursesByComposite.get(composite);
+        if (!course) {
+          course = await prisma.course.upsert({
+            where: { courseName_teacherName: { courseName, teacherName } },
+            update: {},
+            create: { courseName, teacherName },
+          });
+          coursesByComposite.set(composite, course);
+        }
+        await prisma.textbookCourse.upsert({
+          where: { textbookId_courseId: { textbookId: textbook.id, courseId: course.id } },
+          update: {},
+          create: { textbookId: textbook.id, courseId: course.id },
+        });
+      }
     });
-    savedRows.push(row);
+  });
+
+  const accountRows = accountSeeds.map((seed) => accountsByEmail.get(seed.email));
+  const itemSeeds = Array.from({ length: 80 }, (_, index) => {
+    const number = index + 1;
+    const seller = accountRows[(index * 5 + 1) % accountRows.length];
+    const textbookSeed = bookSeeds[(index * 7 + Math.floor(index / 6)) % bookSeeds.length];
+    const isCanceled = number % 19 === 0;
+    const isCompleted = !isCanceled && number % 13 === 0;
+    const hasReceiver = !isCanceled && (isCompleted || number % 7 === 0 || number % 17 === 0);
+    let receiver = hasReceiver ? accountRows[(index * 3 + 8) % accountRows.length] : null;
+    if (receiver?.id === seller.id) receiver = accountRows[(index * 3 + 9) % accountRows.length];
+    const canceledHours = isCanceled ? (number % 2 === 0 ? 12 : 40 + number) : null;
+    return {
+      number,
+      seller,
+      receiver,
+      textbook: textbooksByKey.get(textbookSeed.key),
+      condition: conditions[(index * 3 + number) % conditions.length],
+      conditionNote: notes[(index * 5 + 2) % notes.length],
+      isCanceled,
+      canceledAt: canceledHours === null ? null : hoursAgo(canceledHours),
+      completedAt: isCompleted ? daysAgo((number % 11) + 1, 16) : null,
+      createdAt: daysAgo((index * 4) % 46, 8 + (index % 10)),
+    };
+  });
+
+  await stage("架空出品80件", async () => {
+    const rows = await mapLimit(itemSeeds, 6, async (seed) => {
+      const data = {
+        sellerAccountId: seed.seller.id,
+        receiverAccountId: seed.receiver?.id ?? null,
+        textbookId: seed.textbook.id,
+        condition: seed.condition,
+        conditionNote: seed.conditionNote,
+        isCanceled: seed.isCanceled,
+        canceledAt: seed.canceledAt,
+        completedAt: seed.completedAt,
+        createdAt: seed.createdAt,
+      };
+      return prisma.item.upsert({
+        where: { seedKey: itemSeedKey(seed.number) },
+        update: data,
+        create: { seedKey: itemSeedKey(seed.number), ...data },
+      });
+    });
+    rows.forEach((row, index) => itemsByNumber.set(itemSeeds[index].number, row));
+  });
+
+  const messageTemplates = [
+    ["デモ質問：この架空教科書はまだ受け取り可能ですか？", "デモ返信：現在も募集中という設定です。"],
+    ["デモ質問：書き込みの量を確認できますか？", "デモ返信：一部の章に少しだけある設定です。"],
+    ["デモ質問：架空授業で使う版と同じですか？", "デモ返信：登録済み情報と一致する設定です。"],
+    ["デモ質問：付属資料は残っていますか？", "デモ返信：架空の付属資料が揃っている設定です。"],
+    ["デモ質問：受け取り希望として相談を進めてもよいですか？", "デモ返信：チャットで相談を進める設定です。"],
+    ["デモ質問：本文に目立つ傷はありますか？", "デモ返信：破れや欠損はない設定です。"],
+    ["デモ質問：関連する架空教科で利用できますか？", "デモ返信：関連教科に登録されている設定です。"],
+  ];
+  const chatSeeds: { number: number; item: any; sender: any; message: string; sentAt: Date }[] = [];
+  let chatNumber = 1;
+  for (let number = 1; number <= 80 && chatNumber <= 104; number += 1) {
+    const item = itemsByNumber.get(number);
+    const seed = itemSeeds[number - 1];
+    if (!item || seed.isCanceled || number % 3 === 0) continue;
+    let inquirer = seed.receiver ?? accountRows[(number * 7 + 3) % accountRows.length];
+    if (inquirer.id === seed.seller.id) inquirer = accountRows[(number * 7 + 4) % accountRows.length];
+    const template = messageTemplates[number % messageTemplates.length];
+    chatSeeds.push({ number: chatNumber++, item, sender: inquirer, message: template[0], sentAt: hoursAgo(170 - Math.min(number * 2, 150)) });
+    if (chatNumber <= 104) {
+      chatSeeds.push({ number: chatNumber++, item, sender: seed.seller, message: template[1], sentAt: hoursAgo(168 - Math.min(number * 2, 150)) });
+    }
   }
 
-  console.log("[8/10] 推薦フィードバックと既読状態を登録しています...");
-  await mapBatches(accountRows.slice(0, 10), 5, async (account: any, index) => {
-    const item = itemRows[(index * 13 + 17) % itemRows.length];
-    if (item.sellerAccountId !== account.id) {
-      await prisma.recommendationFeedback.upsert({
-        where: { accountId_itemId: { accountId: account.id, itemId: item.id } },
-        update: { feedback: "not_interested" },
-        create: { accountId: account.id, itemId: item.id, feedback: "not_interested" },
-      });
+  await stage(`架空チャット${chatSeeds.length}件`, async () => {
+    await mapLimit(chatSeeds, 8, async (seed) => prisma.chatMessage.upsert({
+      where: { seedKey: chatSeedKey(seed.number) },
+      update: { itemId: seed.item.id, senderAccountId: seed.sender.id, message: seed.message, sentAt: seed.sentAt },
+      create: { seedKey: chatSeedKey(seed.number), itemId: seed.item.id, senderAccountId: seed.sender.id, message: seed.message, sentAt: seed.sentAt },
+    }));
+  });
+
+  const courseRows = [...coursesByComposite.values()];
+  const enrollmentData: { accountId: number; courseId: number }[] = [];
+  accountRows.forEach((account, accountIndex) => {
+    const desired = 4 + (accountIndex % 3);
+    for (let offset = 0; offset < desired; offset += 1) {
+      const course = courseRows[(accountIndex * 5 + offset * 7) % courseRows.length];
+      enrollmentData.push({ accountId: account.id, courseId: course.id });
     }
   });
-  const readData = chatSeeds.slice(0, 36).map((chat, index) => ({
-    accountId: accountRows[(index + 2) % accountRows.length].id,
-    itemId: chat.itemId,
-    lastReadAt: hoursAgo(3 + index * 2),
-  }));
-  await prisma.itemReadStatus.createMany({ data: readData, skipDuplicates: true });
-
-  console.log("[9/10] 通知を登録しています...");
-  const notificationSeeds = accountRows.slice(0, 20).map((account: any, index: number) => {
-    const item = itemRows[(index * 9 + 4) % itemRows.length];
-    const type = index % 3 === 0 ? "saved_search" : index % 3 === 1 ? "chat" : "favorite_update";
-    const messages: Record<string, string> = {
-      saved_search: `保存した検索に合う「${bookSeeds[(index * 3) % bookSeeds.length].title}」の新着出品があります。`,
-      chat: `「${bookSeeds[(index * 3 + 1) % bookSeeds.length].title}」のチャットに新しいメッセージがあります。`,
-      favorite_update: `お気に入りの「${bookSeeds[(index * 3 + 2) % bookSeeds.length].title}」の情報が更新されました。`,
-    };
-    return { accountId: account.id, type, itemId: item.id, savedSearchId: type === "saved_search" ? (savedRows.find((row: any) => row.accountId === account.id)?.id || null) : null, message: messages[type], isRead: index % 4 === 0, dedupeKey: `v11-notification-${String(index + 1).padStart(3, "0")}`, createdAt: hoursAgo(index + 1) };
+  await stage(`架空履修科目${enrollmentData.length}件`, async () => {
+    await prisma.accountCourse.createMany({ data: enrollmentData, skipDuplicates: true });
   });
-  await mapBatches(notificationSeeds, 8, (row) => prisma.notification.upsert({
-    where: { dedupeKey: row.dedupeKey }, update: row, create: row,
-  }));
 
-  console.log("[10/10] 件数を確認しています...");
-  const [accountCount, courseCount, textbookCount, itemCount, chatCount, favoriteCount, enrollmentCount] = await Promise.all([
-    prisma.account.count(), prisma.course.count(), prisma.textbook.count(), prisma.item.count(),
-    prisma.chatMessage.count(), prisma.favorite.count(), prisma.accountCourse.count(),
+  const openItems = itemSeeds
+    .filter((seed) => !seed.isCanceled && !seed.completedAt)
+    .map((seed) => itemsByNumber.get(seed.number));
+  const favoriteData: { accountId: number; itemId: number; createdAt: Date }[] = [];
+  const viewData: { accountId: number; itemId: number; viewedAt: Date; viewCount: number }[] = [];
+  accountRows.forEach((account, accountIndex) => {
+    for (let offset = 0; offset < 6; offset += 1) {
+      const item = openItems[(accountIndex * 9 + offset * 5) % openItems.length];
+      if (item && item.sellerAccountId !== account.id) {
+        favoriteData.push({ accountId: account.id, itemId: item.id, createdAt: daysAgo((accountIndex + offset) % 12, 18) });
+      }
+    }
+    for (let offset = 0; offset < 8; offset += 1) {
+      const item = openItems[(accountIndex * 11 + offset * 3 + 2) % openItems.length];
+      if (item && item.sellerAccountId !== account.id) {
+        viewData.push({
+          accountId: account.id,
+          itemId: item.id,
+          viewedAt: daysAgo((accountIndex * 2 + offset) % 15, 19),
+          viewCount: 1 + ((accountIndex + offset * 2) % 9),
+        });
+      }
+    }
+  });
+
+  await stage(`架空お気に入り約${favoriteData.length}件・閲覧履歴約${viewData.length}件`, async () => {
+    await mapLimit(favoriteData, 10, async (data) => prisma.favorite.upsert({
+      where: { accountId_itemId: { accountId: data.accountId, itemId: data.itemId } },
+      update: { createdAt: data.createdAt },
+      create: data,
+    }));
+    await mapLimit(viewData, 10, async (data) => prisma.itemView.upsert({
+      where: { accountId_itemId: { accountId: data.accountId, itemId: data.itemId } },
+      update: { viewedAt: data.viewedAt, viewCount: data.viewCount },
+      create: data,
+    }));
+  });
+
+  const savedSearchTemplates = [
+    ["架空教科の新着", "", "course", "all", "open", "newest"],
+    ["状態のよいデモ本", "", "all", "比較的きれい", "open", "newest"],
+    ["蒼海シリーズ", "蒼海", "all", "all", "open", "popular"],
+    ["デモ教員から探す", "デモ教員", "teacher", "all", "open", "updated"],
+  ];
+  const savedSearchRows: any[] = [];
+  await stage("架空保存検索24件", async () => {
+    for (let accountIndex = 0; accountIndex < accountRows.length; accountIndex += 1) {
+      const account = accountRows[accountIndex];
+      const template = savedSearchTemplates[accountIndex % savedSearchTemplates.length];
+      const course = courseRows[(accountIndex * 4) % courseRows.length];
+      const name = `${template[0]} ${String(accountIndex + 1).padStart(2, "0")}`;
+      const keyword = accountIndex % 3 === 0 ? course.courseName : template[1];
+      const row = await prisma.savedSearch.upsert({
+        where: { accountId_name: { accountId: account.id, name } },
+        update: {
+          keyword: keyword || null,
+          searchTarget: template[2], condition: template[3], itemStatus: template[4], sortOrder: template[5],
+          lastCheckedAt: daysAgo(2 + (accountIndex % 10)),
+        },
+        create: {
+          accountId: account.id, name, keyword: keyword || null,
+          searchTarget: template[2], condition: template[3], itemStatus: template[4], sortOrder: template[5],
+          lastCheckedAt: daysAgo(2 + (accountIndex % 10)),
+        },
+      });
+      savedSearchRows.push(row);
+    }
+  });
+
+  const feedbackData = accountRows.slice(0, 14).map((account, index) => {
+    let item = openItems[(index * 7 + 4) % openItems.length];
+    if (item.sellerAccountId === account.id) item = openItems[(index * 7 + 5) % openItems.length];
+    return { accountId: account.id, itemId: item.id, feedback: "not_interested" };
+  });
+  await stage("架空推薦フィードバック14件", async () => {
+    await mapLimit(feedbackData, 8, async (data) => prisma.recommendationFeedback.upsert({
+      where: { accountId_itemId: { accountId: data.accountId, itemId: data.itemId } },
+      update: { feedback: data.feedback },
+      create: data,
+    }));
+  });
+
+  const notificationData = accountRows.slice(0, 18).map((account, index) => {
+    let item = openItems[(index * 5 + 1) % openItems.length];
+    if (item.sellerAccountId === account.id) item = openItems[(index * 5 + 2) % openItems.length];
+    const type = index % 3 === 0 ? "saved_search" : index % 3 === 1 ? "favorite_update" : "chat";
+    const savedSearch = type === "saved_search" ? savedSearchRows[index % savedSearchRows.length] : null;
+    const message = type === "saved_search"
+      ? `架空の保存検索「${savedSearch.name}」に合う新しい出品があります。`
+      : type === "favorite_update"
+        ? "お気に入りに登録した架空教科書の情報が更新されました。"
+        : "架空の譲渡品チャットに新しいデモメッセージがあります。";
+    return {
+      accountId: account.id,
+      type,
+      itemId: item.id,
+      savedSearchId: savedSearch?.accountId === account.id ? savedSearch.id : null,
+      message,
+      isRead: index % 4 === 0,
+      dedupeKey: `fictional-v12-notification-${String(index + 1).padStart(2, "0")}`,
+      createdAt: hoursAgo((index + 1) * 3),
+    };
+  });
+  await stage("架空通知18件", async () => {
+    await mapLimit(notificationData, 8, async (data) => prisma.notification.upsert({
+      where: { dedupeKey: data.dedupeKey },
+      update: data,
+      create: data,
+    }));
+  });
+
+  const readStatusData = chatSeeds.slice(0, 24).map((chat, index) => ({
+    accountId: accountRows[index % accountRows.length].id,
+    itemId: chat.item.id,
+    lastReadAt: hoursAgo(160 - Math.min(index * 5, 140)),
+  })).filter((value, index, self) => self.findIndex((other) => other.accountId === value.accountId && other.itemId === value.itemId) === index);
+  await stage(`架空既読状態${readStatusData.length}件`, async () => {
+    await mapLimit(readStatusData, 8, async (data) => prisma.itemReadStatus.upsert({
+      where: { accountId_itemId: { accountId: data.accountId, itemId: data.itemId } },
+      update: { lastReadAt: data.lastReadAt },
+      create: data,
+    }));
+  });
+
+  const counts = await Promise.all([
+    prisma.account.count(), prisma.textbook.count(), prisma.course.count(), prisma.item.count(),
+    prisma.chatMessage.count(), prisma.accountCourse.count(), prisma.favorite.count(), prisma.itemView.count(),
   ]);
-  console.log(`完了: アカウント ${accountCount}件 / 教科 ${courseCount}件 / 教科書 ${textbookCount}冊 / 出品 ${itemCount}件 / チャット ${chatCount}件 / お気に入り ${favoriteCount}件 / 履修登録 ${enrollmentCount}件`);
+  console.log("[seed] 架空データの投入がすべて完了しました。");
+  console.log(`[seed] DB合計: 架空アカウント ${counts[0]}件 / 架空教科書 ${counts[1]}冊 / 架空教科 ${counts[2]}件 / 出品 ${counts[3]}件 / チャット ${counts[4]}件 / 履修 ${counts[5]}件 / お気に入り ${counts[6]}件 / 閲覧履歴 ${counts[7]}件`);
 }
 
 main()
@@ -305,7 +385,7 @@ main()
     await pool.end();
   })
   .catch(async (error) => {
-    console.error(error);
+    console.error("[seed] エラーが発生しました。", error);
     await prisma.$disconnect();
     await pool.end();
     process.exit(1);

@@ -15,7 +15,6 @@ import {
   sortItems,
 } from "./src/services/search-service.ts";
 import { rerankRecommendations, scoreRecommendationCandidates } from "./src/services/recommendation-service.ts";
-import { rankItemsForEnrolledCourses, rankTrendingItems } from "./src/services/course-personalization-service.ts";
 import {
   notifyChatParticipants,
   notifyFavoriteStateChange,
@@ -108,6 +107,21 @@ function formatDate(value: Date | string | null) {
   });
 }
 
+function formatRelativeDate(value: Date | string | null) {
+  if (!value) return "";
+  const diffMs = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (minutes < 1) return "たった今";
+  if (minutes < 60) return `${minutes}分前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間前`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}日前`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}か月前`;
+  return `${Math.floor(months / 12)}年前`;
+}
+
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -182,6 +196,7 @@ async function baseRenderData(req: Request, currentAccount: any) {
     unreadCount: currentAccount ? await getHeaderNotificationCount(currentAccount.id) : 0,
     ...getMessageParams(req),
     formatDate,
+    formatRelativeDate,
     getItemStatusLabel,
     getItemStatusClass,
   };
@@ -195,30 +210,8 @@ async function getFavoriteItemIds(accountId: number) {
   return favorites.map((favorite: any) => favorite.itemId);
 }
 
-async function getEnrolledCourses(accountId: number) {
-  const rows = await prisma.accountCourse.findMany({
-    where: { accountId },
-    include: { course: true },
-    orderBy: [{ course: { courseName: "asc" } }],
-  });
-  return rows.map((row: any) => row.course);
-}
-
-function isDefaultDiscovery(criteria: any, page: number) {
-  return !criteria.keyword &&
-    criteria.searchTarget === "all" &&
-    criteria.condition === "all" &&
-    criteria.itemStatus === "open" &&
-    criteria.sortOrder === "newest" &&
-    page === 1;
-}
-
-function buildCriteriaUrl(criteria: any, overrides: Record<string, string>) {
-  return `/?${buildSearchQuery({ ...criteria, ...overrides })}`;
-}
-
-async function getRecommendationSection(accountId: number, enrolledCourseIds = new Set<number>()) {
-  const [favoriteSignals, viewSignals, feedbackRows] = await Promise.all([
+async function getRecommendationSection(accountId: number) {
+  const [favoriteSignals, viewSignals, feedbackRows, enrolledRows] = await Promise.all([
     prisma.favorite.findMany({
       where: { accountId },
       include: { item: { include: { textbook: { include: textbookWithCoursesInclude } } } },
@@ -235,6 +228,10 @@ async function getRecommendationSection(accountId: number, enrolledCourseIds = n
       where: { accountId, feedback: "not_interested" },
       select: { itemId: true },
     }),
+    prisma.accountCourse.findMany({
+      where: { accountId },
+      select: { courseId: true },
+    }),
   ]);
 
   const favoriteItems = favoriteSignals.map((signal: any) => signal.item);
@@ -244,6 +241,7 @@ async function getRecommendationSection(accountId: number, enrolledCourseIds = n
     ...viewedItems.slice(0, 5).map((item: any) => item.id),
   ]);
   const feedbackItemIds = new Set<number>(feedbackRows.map((row: any) => row.itemId));
+  const enrolledCourseIds = new Set<number>(enrolledRows.map((row: any) => row.courseId));
 
   const candidateItems = await prisma.item.findMany({
     where: {
@@ -257,7 +255,7 @@ async function getRecommendationSection(accountId: number, enrolledCourseIds = n
     take: 100,
   });
 
-  const hasSignals = favoriteItems.length > 0 || viewedItems.length > 0 || enrolledCourseIds.size > 0;
+  const hasSignals = favoriteItems.length > 0 || viewedItems.length > 0;
   const scoredItems = scoreRecommendationCandidates(candidateItems, {
     favoriteItems,
     viewedItems,
@@ -273,6 +271,62 @@ async function getRecommendationSection(accountId: number, enrolledCourseIds = n
       ? "お気に入り・閲覧履歴を点数化し、同じ教科書への偏りを抑えて表示しています。"
       : "閲覧やお気に入りの履歴が増えると、あなたに合う教科書を優先して表示します。",
     items,
+  };
+}
+
+async function getHomeShelves(accountId: number) {
+  const enrolledRows = await prisma.accountCourse.findMany({
+    where: { accountId },
+    include: { course: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const enrolledCourseIds = enrolledRows.map((row: any) => row.courseId);
+
+  const [courseItems, recentViewRows, trendingCandidates] = await Promise.all([
+    enrolledCourseIds.length > 0
+      ? prisma.item.findMany({
+          where: {
+            isCanceled: false,
+            completedAt: null,
+            receiverAccountId: null,
+            sellerAccountId: { not: accountId },
+            textbook: { textbookCourses: { some: { courseId: { in: enrolledCourseIds } } } },
+          },
+          include: itemCardInclude,
+          orderBy: { createdAt: "desc" },
+          take: 12,
+        })
+      : Promise.resolve([]),
+    prisma.itemView.findMany({
+      where: {
+        accountId,
+        item: { is: { isCanceled: false, completedAt: null, receiverAccountId: null, sellerAccountId: { not: accountId } } },
+      },
+      include: { item: { include: itemCardInclude } },
+      orderBy: { viewedAt: "desc" },
+      take: 10,
+    }),
+    prisma.item.findMany({
+      where: { isCanceled: false, completedAt: null, receiverAccountId: null, sellerAccountId: { not: accountId } },
+      include: itemCardInclude,
+      orderBy: { createdAt: "desc" },
+      take: 80,
+    }),
+  ]);
+
+  const trendingItems = [...trendingCandidates]
+    .sort((a: any, b: any) => {
+      const aScore = (a._count?.favorites || 0) * 3 + (a._count?.itemViews || 0);
+      const bScore = (b._count?.favorites || 0) * 3 + (b._count?.itemViews || 0);
+      return bScore - aScore || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    })
+    .slice(0, 10);
+
+  return {
+    enrolledCourses: enrolledRows.map((row: any) => row.course),
+    courseItems,
+    recentItems: recentViewRows.map((row: any) => ({ ...row.item, lastViewedAt: row.viewedAt })),
+    trendingItems,
   };
 }
 
@@ -322,72 +376,21 @@ app.get("/", async (req: Request, res: Response) => {
     const safePage = Math.min(currentPage, totalPages);
     const items = sortedItems.slice((safePage - 1) * SEARCH_PAGE_SIZE, safePage * SEARCH_PAGE_SIZE);
 
-    let favoriteItemIds: number[] = [];
-    let recommendationSection: any = null;
-    let enrolledCourses: any[] = [];
-    let discoveryShelves: any = null;
-    const showDiscovery = Boolean(currentAccount && isDefaultDiscovery(criteria, safePage));
+    const isDefaultBrowse = !criteria.keyword && criteria.searchTarget === "all" &&
+      criteria.condition === "all" && criteria.itemStatus === "open" && criteria.sortOrder === "newest";
 
-    if (currentAccount) {
-      [favoriteItemIds, enrolledCourses] = await Promise.all([
-        getFavoriteItemIds(currentAccount.id),
-        getEnrolledCourses(currentAccount.id),
-      ]);
-      const enrolledCourseIds = new Set<number>(enrolledCourses.map((course: any) => course.id));
-      if (!criteria.keyword) recommendationSection = await getRecommendationSection(currentAccount.id, enrolledCourseIds);
-
-      if (showDiscovery) {
-        const [discoveryItems, recentViews] = await Promise.all([
-          prisma.item.findMany({
-            where: {
-              isCanceled: false,
-              completedAt: null,
-              receiverAccountId: null,
-              sellerAccountId: { not: currentAccount.id },
-            },
-            include: itemCardInclude,
-            orderBy: { createdAt: "desc" },
-            take: 120,
-          }),
-          prisma.itemView.findMany({
-            where: {
-              accountId: currentAccount.id,
-              item: { is: { isCanceled: false, completedAt: null, sellerAccountId: { not: currentAccount.id } } },
-            },
-            include: { item: { include: itemCardInclude } },
-            orderBy: { viewedAt: "desc" },
-            take: 8,
-          }),
-        ]);
-        discoveryShelves = {
-          enrolledItems: rankItemsForEnrolledCourses(discoveryItems, enrolledCourseIds, 8),
-          trendingItems: rankTrendingItems(discoveryItems, 8),
-          recentItems: recentViews.map((row: any) => ({ ...row.item, dashboardReason: `最近見た：${formatDate(row.viewedAt)}` })),
-        };
-      }
-    }
+    const [favoriteItemIds, recommendationSection, homeShelves] = currentAccount
+      ? await Promise.all([
+          getFavoriteItemIds(currentAccount.id),
+          isDefaultBrowse ? getRecommendationSection(currentAccount.id) : Promise.resolve(null),
+          isDefaultBrowse ? getHomeShelves(currentAccount.id) : Promise.resolve(null),
+        ])
+      : [[], null, null];
 
     const savedSearchId = Number(req.query.savedSearchId || 0);
     const activeSavedSearch = currentAccount && Number.isInteger(savedSearchId) && savedSearchId > 0
       ? await prisma.savedSearch.findFirst({ where: { id: savedSearchId, accountId: currentAccount.id } })
       : null;
-
-    const activeFilters = [
-      criteria.keyword ? { label: `キーワード：${criteria.keyword}`, url: buildCriteriaUrl(criteria, { keyword: "" }) } : null,
-      criteria.searchTarget !== "all" ? {
-        label: `対象：${({ title: "教科書名", author: "著者名", course: "教科名", teacher: "担当教員" } as any)[criteria.searchTarget]}`,
-        url: buildCriteriaUrl(criteria, { searchTarget: "all" }),
-      } : null,
-      criteria.condition !== "all" ? { label: `状態：${criteria.condition}`, url: buildCriteriaUrl(criteria, { condition: "all" }) } : null,
-      criteria.itemStatus !== "open" ? {
-        label: `取引：${({ negotiating: "交渉中", completed: "譲渡完了", all: "すべて" } as any)[criteria.itemStatus]}`,
-        url: buildCriteriaUrl(criteria, { itemStatus: "open" }),
-      } : null,
-      criteria.sortOrder !== "newest" ? {
-        label: `並び：${({ updated: "更新順", condition: "状態順", popular: "人気順" } as any)[criteria.sortOrder]}`,
-        url: buildCriteriaUrl(criteria, { sortOrder: "newest" }),
-      } : null,
-    ].filter(Boolean);
 
     res.render("index", {
       ...await baseRenderData(req, currentAccount),
@@ -400,16 +403,21 @@ app.get("/", async (req: Request, res: Response) => {
       conditionOptions,
       favoriteItemIds,
       recommendationSection,
-      discoveryShelves,
-      enrolledCourses,
-      showDiscovery,
-      activeFilters,
+      homeShelves,
+      isDefaultBrowse,
       totalItems,
       currentPage: safePage,
       totalPages,
       pageUrl: (page: number) => `${buildPageUrl(criteria, page)}${activeSavedSearch ? `&savedSearchId=${activeSavedSearch.id}` : ""}`,
       activeSavedSearch,
       searchCriteria: criteria,
+      filterChipUrls: {
+        keyword: `/?${buildSearchQuery({ ...criteria, keyword: "" })}`,
+        target: `/?${buildSearchQuery({ ...criteria, searchTarget: "all" })}`,
+        condition: `/?${buildSearchQuery({ ...criteria, condition: "all" })}`,
+        status: `/?${buildSearchQuery({ ...criteria, itemStatus: "open" })}`,
+        sort: `/?${buildSearchQuery({ ...criteria, sortOrder: "newest" })}`,
+      },
     });
   } catch (err) {
     console.error(err);
@@ -496,13 +504,10 @@ app.get("/mypage", async (req: Request, res: Response) => {
       take: 8,
     });
 
-    const [savedSearches, enrolledCourses] = await Promise.all([
-      prisma.savedSearch.findMany({
-        where: { accountId: currentAccount.id },
-        orderBy: { createdAt: "desc" },
-      }),
-      getEnrolledCourses(currentAccount.id),
-    ]);
+    const savedSearches = await prisma.savedSearch.findMany({
+      where: { accountId: currentAccount.id },
+      orderBy: { createdAt: "desc" },
+    });
     const savedSearchesWithCounts = await Promise.all(savedSearches.map(async (search: any) => ({
       ...search,
       newItemCount: await prisma.item.count({
@@ -516,6 +521,16 @@ app.get("/mypage", async (req: Request, res: Response) => {
       }),
       description: describeSavedSearch(search),
     })));
+
+    const [allCourses, enrolledCourseRows] = await Promise.all([
+      prisma.course.findMany({ orderBy: [{ courseName: "asc" }, { teacherName: "asc" }] }),
+      prisma.accountCourse.findMany({
+        where: { accountId: currentAccount.id },
+        include: { course: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+    const enrolledCourseIds = enrolledCourseRows.map((row: any) => row.courseId);
 
     const notificationSummary = await prisma.notification.findMany({
       where: { accountId: currentAccount.id, isRead: false },
@@ -534,8 +549,10 @@ app.get("/mypage", async (req: Request, res: Response) => {
       favoriteItemIds,
       recentViews,
       savedSearches: savedSearchesWithCounts,
-      enrolledCourses,
       notificationSummary,
+      allCourses,
+      enrolledCourses: enrolledCourseRows.map((row: any) => row.course),
+      enrolledCourseIds,
       canceledItemVisibleHours: CANCELED_ITEM_VISIBLE_HOURS,
     });
   } catch (err) {
@@ -618,63 +635,6 @@ app.get("/saved-searches/:savedSearchId/results", async (req: Request, res: Resp
     sortOrder: search.sortOrder,
   }, { savedSearchId: search.id });
   return res.redirect(`/?${query}`);
-});
-
-app.get("/courses", async (req: Request, res: Response) => {
-  const currentAccount = await getCurrentAccount(req);
-  if (!currentAccount) return redirectWithQuery(res, "/login", { error: "履修科目を設定するにはログインしてください。" });
-
-  const q = getQueryString(req.query.q).trim();
-  const courses = await prisma.course.findMany({
-    where: q ? {
-      OR: [
-        { courseName: { contains: q, mode: "insensitive" } },
-        { teacherName: { contains: q, mode: "insensitive" } },
-        { faculty: { contains: q, mode: "insensitive" } },
-      ],
-    } : {},
-    include: {
-      _count: { select: { textbookCourses: true, enrolledAccounts: true } },
-    },
-    orderBy: [{ courseName: "asc" }, { teacherName: "asc" }],
-    take: 80,
-  });
-  const enrolledCourses = await getEnrolledCourses(currentAccount.id);
-  const enrolledCourseIds = enrolledCourses.map((course: any) => course.id);
-
-  res.render("courses", {
-    ...await baseRenderData(req, currentAccount),
-    q,
-    courses,
-    enrolledCourses,
-    enrolledCourseIds,
-  });
-});
-
-app.post("/courses/:courseId/enroll", async (req: Request, res: Response) => {
-  const currentAccount = await getCurrentAccount(req);
-  if (!currentAccount) return redirectWithQuery(res, "/login", { error: "履修科目を設定するにはログインしてください。" });
-  const courseId = Number(req.params.courseId);
-  if (!Number.isInteger(courseId)) return redirectWithQuery(res, "/courses", { error: "教科の指定が正しくありません。" });
-  const course = await prisma.course.findUnique({ where: { id: courseId } });
-  if (!course) return redirectWithQuery(res, "/courses", { error: "教科が見つかりません。" });
-  const count = await prisma.accountCourse.count({ where: { accountId: currentAccount.id } });
-  if (count >= 12) return redirectWithQuery(res, "/courses", { error: "履修科目は最大12件まで登録できます。" });
-  await prisma.accountCourse.upsert({
-    where: { accountId_courseId: { accountId: currentAccount.id, courseId } },
-    update: {},
-    create: { accountId: currentAccount.id, courseId },
-  });
-  return redirectBackWithMessage(res, req.body.returnTo, "/courses", { notice: `「${course.courseName}」を履修科目に追加しました。` });
-});
-
-app.post("/courses/:courseId/unenroll", async (req: Request, res: Response) => {
-  const currentAccount = await getCurrentAccount(req);
-  if (!currentAccount) return redirectWithQuery(res, "/login", { error: "履修科目を設定するにはログインしてください。" });
-  const courseId = Number(req.params.courseId);
-  if (!Number.isInteger(courseId)) return redirectWithQuery(res, "/courses", { error: "教科の指定が正しくありません。" });
-  await prisma.accountCourse.deleteMany({ where: { accountId: currentAccount.id, courseId } });
-  return redirectBackWithMessage(res, req.body.returnTo, "/courses", { notice: "履修科目から削除しました。" });
 });
 
 app.get("/items/new", async (req: Request, res: Response) => {
@@ -773,24 +733,37 @@ app.get("/items/:itemId/edit", async (req: Request, res: Response) => {
 });
 
 app.get("/api/search-suggestions", async (req: Request, res: Response) => {
-  const q = getQueryString(req.query.q).trim();
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   if (q.length < 1) return res.json([]);
+  const contains = { contains: q, mode: "insensitive" };
   const [textbooks, courses] = await Promise.all([
     prisma.textbook.findMany({
-      where: { OR: [{ title: { contains: q, mode: "insensitive" } }, { author: { contains: q, mode: "insensitive" } }] },
+      where: { OR: [{ title: contains }, { author: contains }] },
+      select: { title: true, author: true },
       orderBy: { title: "asc" },
-      take: 5,
+      take: 6,
     }),
     prisma.course.findMany({
-      where: { OR: [{ courseName: { contains: q, mode: "insensitive" } }, { teacherName: { contains: q, mode: "insensitive" } }] },
+      where: { OR: [{ courseName: contains }, { teacherName: contains }] },
+      select: { courseName: true, teacherName: true },
       orderBy: { courseName: "asc" },
-      take: 5,
+      take: 6,
     }),
   ]);
-  return res.json([
-    ...textbooks.map((book: any) => ({ type: "title", label: book.title, meta: `著者：${book.author}`, value: book.title })),
-    ...courses.map((course: any) => ({ type: "course", label: course.courseName, meta: `${course.teacherName}${course.faculty ? `・${course.faculty}` : ""}`, value: course.courseName })),
-  ]);
+  const lowered = q.toLocaleLowerCase("ja");
+  const suggestions = [
+    ...textbooks.flatMap((book: any) => [
+      { label: book.title, value: book.title, target: "title", type: "教科書" },
+      ...(book.author.toLocaleLowerCase("ja").includes(lowered) ? [{ label: book.author, value: book.author, target: "author", type: "著者" }] : []),
+    ]),
+    ...courses.flatMap((course: any) => [
+      { label: course.courseName, value: course.courseName, target: "course", type: "教科" },
+      ...(course.teacherName.toLocaleLowerCase("ja").includes(lowered) ? [{ label: course.teacherName, value: course.teacherName, target: "teacher", type: "担当教員" }] : []),
+    ]),
+  ];
+  const unique = new Map<string, any>();
+  suggestions.forEach((suggestion: any) => unique.set(`${suggestion.target}:${suggestion.value}`, suggestion));
+  return res.json([...unique.values()].slice(0, 10));
 });
 
 app.get("/api/textbooks", async (req: Request, res: Response) => {
@@ -877,6 +850,31 @@ app.post("/accounts", async (req: Request, res: Response) => {
 app.post("/logout", (_req: Request, res: Response) => {
   res.clearCookie("accountId");
   res.redirect("/");
+});
+
+app.post("/account-courses", async (req: Request, res: Response) => {
+  const currentAccount = await getCurrentAccount(req);
+  if (!currentAccount) return redirectWithQuery(res, "/login", { error: "履修科目を設定するにはログインしてください。" });
+
+  const rawIds = Array.isArray(req.body.courseIds) ? req.body.courseIds : req.body.courseIds ? [req.body.courseIds] : [];
+  const courseIds = [...new Set(rawIds.map((value: unknown) => Number(value)).filter(Number.isInteger))].slice(0, 12);
+  const validCourses = courseIds.length > 0
+    ? await prisma.course.findMany({ where: { id: { in: courseIds } }, select: { id: true } })
+    : [];
+
+  await prisma.$transaction(async (tx: any) => {
+    await tx.accountCourse.deleteMany({ where: { accountId: currentAccount.id } });
+    if (validCourses.length > 0) {
+      await tx.accountCourse.createMany({
+        data: validCourses.map((course: any) => ({ accountId: currentAccount.id, courseId: course.id })),
+        skipDuplicates: true,
+      });
+    }
+  });
+
+  return redirectWithQuery(res, "/mypage?tab=courses", {
+    notice: validCourses.length > 0 ? `履修科目を${validCourses.length}件保存しました。` : "履修科目の設定を解除しました。",
+  });
 });
 
 app.post("/saved-searches", async (req: Request, res: Response) => {

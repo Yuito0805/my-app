@@ -11,28 +11,79 @@
 
     <div class="page-header">
       <h1>マイページ</h1>
-      <p><%= currentAccount.accountName %>さんの出品・問い合わせ・お気に入り・保存した検索をまとめて確認できます。</p>
+      <p><%= currentAccount.accountName %>さんの活動と、履修科目に合わせた教科書探しをまとめて管理できます。</p>
     </div>
 
-    <div class="stat-grid stat-grid-seven">
-      <div class="stat-card"><span class="stat-label">未読通知</span><strong class="stat-number"><%= unreadCount %></strong></div>
-      <div class="stat-card"><span class="stat-label">新規チャット</span><strong class="stat-number"><%= unreadItems.length %></strong></div>
-      <div class="stat-card"><span class="stat-label">募集中</span><strong class="stat-number"><%= openItems.length %></strong></div>
-      <div class="stat-card"><span class="stat-label">交渉中</span><strong class="stat-number"><%= negotiatingItems.length %></strong></div>
-      <div class="stat-card"><span class="stat-label">お気に入り</span><strong class="stat-number"><%= favoriteItems.length %></strong></div>
-      <div class="stat-card"><span class="stat-label">保存した検索</span><strong class="stat-number"><%= savedSearches.length %></strong></div>
-      <div class="stat-card"><span class="stat-label">履修科目</span><strong class="stat-number"><%= enrolledCourses.length %></strong></div>
-    </div>
+    <% const updateCount = unreadItems.length + notificationSummary.length; %>
+    <% const activeListingCount = openItems.length + negotiatingItems.length; %>
+    <section class="mypage-overview" aria-labelledby="mypage-overview-title">
+      <div class="overview-heading">
+        <div>
+          <span class="section-eyebrow">ACTIVITY OVERVIEW</span>
+          <h2 id="mypage-overview-title">いま確認したい情報</h2>
+        </div>
+        <p>件数と次の操作を一つのカードにまとめています。</p>
+      </div>
 
-    <div class="tabs">
+      <div class="dashboard-summary-grid">
+        <a class="dashboard-summary-card update-summary <%= updateCount > 0 ? 'has-update' : '' %>" href="/mypage?tab=updates">
+          <span class="summary-icon" aria-hidden="true">●</span>
+          <span class="summary-content">
+            <span class="summary-label">新規更新</span>
+            <strong class="summary-number"><%= updateCount %><small>件</small></strong>
+            <span class="summary-description"><%= updateCount > 0 ? '未読の通知やチャットがあります' : '現在、新しい更新はありません' %></span>
+          </span>
+          <span class="summary-action">更新を確認 <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="dashboard-summary-card" href="/mypage?tab=listings">
+          <span class="summary-icon" aria-hidden="true">▣</span>
+          <span class="summary-content">
+            <span class="summary-label">出品中</span>
+            <strong class="summary-number"><%= activeListingCount %><small>件</small></strong>
+            <span class="summary-description">募集中 <%= openItems.length %>件・交渉中 <%= negotiatingItems.length %>件</span>
+          </span>
+          <span class="summary-action">出品一覧を見る <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="dashboard-summary-card" href="/mypage?tab=chats">
+          <span class="summary-icon" aria-hidden="true">✉</span>
+          <span class="summary-content">
+            <span class="summary-label">問い合わせ中</span>
+            <strong class="summary-number"><%= myChatThreads.length %><small>件</small></strong>
+            <span class="summary-description">自分がメッセージを送った譲渡品</span>
+          </span>
+          <span class="summary-action">チャットを見る <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="dashboard-summary-card" href="/mypage?tab=favorites">
+          <span class="summary-icon" aria-hidden="true">♥</span>
+          <span class="summary-content">
+            <span class="summary-label">お気に入り</span>
+            <strong class="summary-number"><%= favoriteItems.length %><small>件</small></strong>
+            <span class="summary-description">あとで見たい架空教科書を保存中</span>
+          </span>
+          <span class="summary-action">お気に入りを見る <span aria-hidden="true">→</span></span>
+        </a>
+      </div>
+
+      <div class="dashboard-quick-links" aria-label="その他のマイページ項目">
+        <a href="/mypage?tab=recent"><span>最近見たもの</span><strong><%= recentViews.length %>件</strong></a>
+        <a href="/mypage?tab=saved"><span>保存した検索</span><strong><%= savedSearches.length %>件</strong></a>
+        <a href="/mypage?tab=courses"><span>履修科目</span><strong><%= enrolledCourses.length %>件</strong></a>
+        <a href="/notifications"><span>未読通知</span><strong><%= unreadCount %>件</strong></a>
+      </div>
+    </section>
+
+    <div class="tabs mypage-tabs">
       <div class="tab-list" role="tablist" aria-label="マイページの表示切り替え">
-        <button class="tab-button active" type="button" role="tab" data-tab-target="updates">新規更新 <%= unreadItems.length + notificationSummary.length %></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="listings">自分の出品 <%= myItems.length %></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="chats">問い合わせ中 <%= myChatThreads.length %></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="favorites">お気に入り <%= favoriteItems.length %></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="recent">最近見たもの <%= recentViews.length %></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="saved">保存した検索 <%= savedSearches.length %></button>
-        <button class="tab-button" type="button" role="tab" data-tab-target="courses">履修科目 <%= enrolledCourses.length %></button>
+        <button class="tab-button active" type="button" role="tab" data-tab-target="updates"><span>新規更新</span><strong><%= updateCount %></strong></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="listings"><span>自分の出品</span><strong><%= myItems.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="chats"><span>問い合わせ中</span><strong><%= myChatThreads.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="favorites"><span>お気に入り</span><strong><%= favoriteItems.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="recent"><span>最近見たもの</span><strong><%= recentViews.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="saved"><span>保存した検索</span><strong><%= savedSearches.length %></strong></button>
+        <button class="tab-button" type="button" role="tab" data-tab-target="courses"><span>履修科目</span><strong><%= enrolledCourses.length %></strong></button>
       </div>
     </div>
 
@@ -182,6 +233,19 @@
       </div>
     </section>
 
+    <section class="tab-panel" data-tab-panel="courses" role="tabpanel">
+      <div class="card course-settings-card">
+        <div class="section-header"><div><span class="section-eyebrow">PERSONALIZE</span><h2>履修科目を設定</h2><p>選んだ科目に関連する募集中の教科書を、トップページとおすすめで優先表示します。最大12科目まで選択できます。</p></div><a class="button-link secondary small-button" href="/">トップページで確認</a></div>
+        <% if (enrolledCourses.length > 0) { %><div class="selected-course-summary"><% enrolledCourses.forEach(course => { %><span class="selected-course-chip"><%= course.courseName %><small><%= course.teacherName %></small></span><% }) %></div><% } else { %><div class="course-empty-hint"><strong>履修科目はまだ登録されていません。</strong><span>下の候補から選ぶと、教科書探しが個別化されます。</span></div><% } %>
+        <form action="/account-courses" method="post" class="course-settings-form" data-course-form>
+          <label class="course-filter-field"><span>科目を絞り込む</span><input type="search" placeholder="例：Web、データ、英語、法学" data-course-filter autocomplete="off"></label>
+          <div class="course-selection-meta"><span>選択中 <strong data-course-count><%= enrolledCourseIds.length %></strong> / 12</span><button class="text-button" type="button" data-course-clear>すべて解除</button></div>
+          <div class="course-choice-grid" data-course-grid><% allCourses.forEach(course => { %><label class="course-choice" data-course-choice data-search-text="<%= `${course.courseName} ${course.teacherName}`.toLowerCase() %>"><input type="checkbox" name="courseIds" value="<%= course.id %>" <%= enrolledCourseIds.includes(course.id) ? 'checked' : '' %>><span class="course-choice-check">✓</span><span class="course-choice-main"><strong><%= course.courseName %></strong><small><%= course.teacherName %></small></span></label><% }) %></div>
+          <div class="form-actions sticky-form-actions"><button class="primary" type="submit">履修科目を保存</button><span class="meta">設定はいつでも変更できます。</span></div>
+        </form>
+      </div>
+    </section>
+
     <section class="tab-panel" data-tab-panel="saved" role="tabpanel">
       <div class="card">
         <div class="section-header"><div><h2>保存した検索</h2><p>よく使う条件を再利用し、前回確認後の新着件数を確認できます。</p></div><a class="button-link secondary small-button" href="/">新しい条件で検索</a></div>
@@ -211,23 +275,6 @@
                   </form>
                 </div>
               </article>
-            <% }) %>
-          </div>
-        <% } %>
-      </div>
-    </section>
-
-    <section class="tab-panel" data-tab-panel="courses" role="tabpanel">
-      <div class="card">
-        <div class="section-header"><div><h2>履修科目</h2><p>登録した教科は、トップページの新着棚とおすすめ順位に反映されます。</p></div><a class="button-link primary small-button" href="/courses">履修科目を編集</a></div>
-        <% if (enrolledCourses.length === 0) { %>
-          <div class="empty-state"><strong>履修科目はまだ登録されていません。</strong><p>今学期の教科を登録すると、関連する教科書を見つけやすくなります。</p><a class="button-link primary" href="/courses">履修科目を設定する</a></div>
-        <% } else { %>
-          <div class="enrolled-course-summary">
-            <% enrolledCourses.forEach(course => { %>
-              <a class="enrolled-course-pill" href="/?q=<%= encodeURIComponent(course.courseName) %>&target=course&condition=all&status=open&sort=newest">
-                <strong><%= course.courseName %></strong><span><%= course.teacherName %><% if (course.term) { %>・<%= course.term %><% } %></span>
-              </a>
             <% }) %>
           </div>
         <% } %>

@@ -10,7 +10,7 @@
       <section class="card" style="max-width:720px; margin:40px auto; text-align:center;">
         <div class="avatar" style="width:58px;height:58px;margin:0 auto 14px;font-size:1.2rem;"><%= currentAccount.accountName.slice(0, 1) %></div>
         <h1>ログイン済みです</h1>
-        <p><strong><%= currentAccount.accountName %></strong>（<%= currentAccount.email %>）として利用しています。</p>
+        <p><strong><%= currentAccount.accountName %></strong>として利用しています。</p>
         <div class="button-row" style="justify-content:center;">
           <a class="button-link primary" href="/">教科書を探す</a>
           <a class="button-link secondary" href="/mypage">マイページへ</a>
@@ -19,9 +19,9 @@
     <% } else { %>
       <div class="auth-shell">
         <section class="auth-side">
-          <span class="hero-eyebrow">慶應生向け教科書譲渡サービス</span>
+          <span class="hero-eyebrow">授業課題用・公開デモ</span>
           <h1>使い終わった教科書を、次に必要な学生へ。</h1>
-          <p>教科書名・教科名で探し、チャットで受け渡しを相談できます。金銭の仲介は行いません。</p>
+          <p>架空の教科書名・教科名を使って検索、出品、チャット、おすすめ機能を体験できます。掲載内容はすべてデモデータです。</p>
           <div class="auth-benefits">
             <div class="auth-benefit"><span class="auth-benefit-icon">⌕</span><div><strong>授業から検索</strong><br><span class="small">教科書名だけでなく教科名でも探せます。</span></div></div>
             <div class="auth-benefit"><span class="auth-benefit-icon">◫</span><div><strong>かんたん出品</strong><br><span class="small">登録済み教科書なら情報を自動入力します。</span></div></div>
@@ -36,11 +36,11 @@
             <form action="/accounts" method="post">
               <div class="form-field">
                 <label for="signup-name">名前<span class="required">必須</span></label>
-                <input id="signup-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：山田太郎" autocomplete="name" required>
+                <input id="signup-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：デモ利用者D01" autocomplete="name" required>
               </div>
               <div class="form-field">
                 <label for="signup-email">メールアドレス<span class="required">必須</span></label>
-                <input id="signup-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：student@keio.jp" autocomplete="email" required>
+                <input id="signup-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：webpro-demo-new@keio.jp" autocomplete="email" required>
                 <p class="form-help">@keio.jp で終わるメールアドレスのみ登録できます。</p>
               </div>
               <button class="primary full-button" type="submit">アカウントを作成する</button>
@@ -50,14 +50,29 @@
           <% } else { %>
             <h2>ログイン</h2>
             <p class="meta">登録時の名前とメールアドレスを入力してください。</p>
+            <div class="demo-account-panel" aria-labelledby="demo-account-title">
+              <div>
+                <span class="section-eyebrow">DEMO ACCOUNTS</span>
+                <h3 id="demo-account-title">すぐに試せる架空アカウント</h3>
+                <p>ボタンを押すと、下のログインフォームへ架空の情報を入力します。</p>
+              </div>
+              <div class="demo-account-grid">
+                <button class="demo-account-button" type="button" data-demo-login data-demo-name="デモ利用者A02" data-demo-email="webpro-demo-a02@keio.jp">
+                  <strong>出品者として試す</strong><span>デモ利用者A02</span>
+                </button>
+                <button class="demo-account-button" type="button" data-demo-login data-demo-name="デモ利用者A01" data-demo-email="webpro-demo-a01@keio.jp">
+                  <strong>受取希望者として試す</strong><span>デモ利用者A01</span>
+                </button>
+              </div>
+            </div>
             <form action="/login" method="post">
               <div class="form-field">
                 <label for="login-name">名前<span class="required">必須</span></label>
-                <input id="login-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：山田太郎" autocomplete="name" required>
+                <input id="login-name" type="text" name="accountName" value="<%= prefillName %>" placeholder="例：デモ利用者A01" autocomplete="name" required>
               </div>
               <div class="form-field">
                 <label for="login-email">メールアドレス<span class="required">必須</span></label>
-                <input id="login-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：student@keio.jp" autocomplete="email" required>
+                <input id="login-email" type="email" name="email" value="<%= prefillEmail %>" placeholder="例：webpro-demo-a01@keio.jp" autocomplete="email" required>
               </div>
               <button class="primary full-button" type="submit">ログインする</button>
             </form>

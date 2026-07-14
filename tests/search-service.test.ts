@@ -8,9 +8,9 @@ const sampleItem = {
   receiverAccountId: null,
   condition: "比較的きれい",
   textbook: {
-    title: "Webアプリ開発入門",
-    author: "山田太郎",
-    textbookCourses: [{ course: { courseName: "Webプログラミング", teacherName: "佐藤先生" } }],
+    title: "蒼海情報構造ノート",
+    author: "デモ著者A01",
+    textbookCourses: [{ course: { courseName: "蒼海情報構造演習", teacherName: "デモ教員A01" } }],
   },
 };
 
@@ -22,7 +22,7 @@ test("不正な検索条件は既定値に正規化される", () => {
 
 test("教科名による保存検索に一致する", () => {
   assert.equal(itemMatchesSearch(sampleItem, {
-    keyword: "Webプログラミング",
+    keyword: "蒼海情報構造演習",
     searchTarget: "course",
     condition: "比較的きれい",
     itemStatus: "open",
